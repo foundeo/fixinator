@@ -1,0 +1,41 @@
+{
+    "name":"fixinator",
+    "version":"0.0.1",
+    "author":"Foundeo Inc.",
+    "location":"foundeo/fixinator#v0.0.1",
+    "homepage":"https://fixinator.app/",
+    "documentation":"https://github.com/foundeo/fixinator",
+    "repository":{
+        "type":"git",
+        "URL":"https://github.com/foundeo/fixinator"
+    },
+    "bugs":"https://github.com/foundeo/fixinator/issues",
+    "slug":"fixinator",
+    "shortDescription":"A CommandBox comand for scanning CFML code.",
+    "type":"commandbox-modules",
+    "keywords":[ ],
+    "private":false,
+    "license":[
+        {
+            "type":"GPL",
+            "URL":"https://github.com/foundeo/fixinator"
+        }
+    ],
+    "dependencies":{
+        
+    },
+    "devDependencies":{
+        
+    },
+    "installPaths":{
+        
+    },
+    "scripts":{
+        "postVersion":"package set location='foundeo/fixinator#v`package version`'",
+        "onRelease":"publish",
+        "postPublish":"!git push && !git push --tags"
+    },
+    "ignore":[
+        
+    ]
+}

@@ -61,7 +61,7 @@ component singleton="true" {
 						}
 						arrayAppend(results.results, local.result.results, true);
 						payload.result = local.result;
-						arrayAppend(results.payloads, payload);
+						//arrayAppend(results.payloads, payload);
 						size = 0;
 						payload = {"config"=arguments.config, "files"=[]};
 					} else {
@@ -72,9 +72,9 @@ component singleton="true" {
 			} else {
 				results.warnings.append( { "message":"Missing Read Permission", "path":local.f } );
 			}
-			percentValue = int( (fileCounter/arrayLen(files)) * 100);
+			percentValue = int( (fileCounter/arrayLen(files)) * 90);
 			if (percentValue >= 100) {
-				percentValue = 99;
+				percentValue = 90;
 			}
 			if (hasProgressBar) {
 				progressBar.update( percent=percentValue, currentCount=fileCounter, totalCount=arrayLen(files) );	
@@ -91,7 +91,7 @@ component singleton="true" {
 				job.complete(dumpLog=false);
 			}
 			payload.result = local.result;
-			arrayAppend(results.payloads, payload);
+			//arrayAppend(results.payloads, payload);
 			arrayAppend(results.results, local.result.results, true);
 		}
 		structDelete(results, "payloads");
@@ -126,7 +126,7 @@ component singleton="true" {
 				return sendPayload(payload=arguments.payload, isRetry=1);
 			}
 		} else if (httpResult.statusCode contains "502") { 
-			//TOO MANY REQUESTS
+			//BAD GATEWAY - lambda timeout issue
 			if (arguments.isRetry == 1) {
 				throw(message="Fixinator API Returned 502 Status Code (Bad Gateway). Please try again shortly or contact Foundeo Inc. if the problem persists.");
 			} else {

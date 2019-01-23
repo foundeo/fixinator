@@ -9,6 +9,7 @@
 component extends="commandbox.system.BaseCommand" aliases="combover" excludeFromHelp=false {
 
 	property inject="FixinatorClient@fixinator" name="fixinatorClient";
+	property inject="FixinatorReport@fixinator" name="fixinatorReport";
 	property inject="progressBarGeneric" name="progressBar";
 
 	/**
@@ -22,7 +23,7 @@ component extends="commandbox.system.BaseCommand" aliases="combover" excludeFrom
 	* @ignoreScanners.hint A comma seperated list of scanner ids to ignore
 	* @autofix.hint Use either off, prompt or automatic
 	**/
-	function run( required string path, string resultFile, string resultFormat="json", boolean verbose=true, string listBy="type", string severity="low", string confidence="low", string ignoreScanners="", autofix="off")  {
+	function run( required string path, string resultFile, string resultFormat="json", boolean verbose=true, string listBy="type", string severity="low", string confidence="high", string ignoreScanners="", autofix="off")  {
 		var fileInfo = "";
 		var severityLevel = 1;
 		var confLevel = 1;
@@ -78,16 +79,51 @@ component extends="commandbox.system.BaseCommand" aliases="combover" excludeFrom
 		
 		
 		try {
+			
 			if (arguments.verbose) {
-				//show progress bars
-				//job.start("Scanning " & arguments.path);
+				//show status dots
+				variables.fixinatorRunning = true;
+				variables.fixinatorThread = "fixinator" & createUUID();
+				
+				thread action="run" name="#variables.fixinatorThread#" print="#print#" {
+	 				// do single thread stuff 
+	 				thread.i = 0;
+	 				for (thread.i=0;thread.i<50;thread.i++) {
+	 					attributes.print.text(".").toConsole();
+	 					thread action="sleep" duration="1000";
+	 					cflock(name="fixinator-command-lock", type="readonly", timeout=1) {
+	 						if (!variables.fixinatorRunning) {
+	 							break;
+	 						}
+	 					}
+	 				}
+				}
+			}
+
+			local.results = fixinatorClient.run(path=arguments.path,config=config);	
+
+			if (arguments.verbose) {
+				//stop status indicator
+				cflock(name="fixinator-command-lock", type="exclusive", timeout="5") {
+					variables.fixinatorRunning = false;
+
+				}
+				thread action="terminate", name="#variables.fixinatorThread#";
+				print.line();
+			}
+			/*
+			if (arguments.verbose) {
+					//show progress bars
+					//job.start("Scanning " & arguments.path);
 				progressBar.update( percent=0 );
 				local.results = fixinatorClient.run(path=arguments.path,config=config, progressBar=progressBar);	
 				//job.complete();	
 			} else {
 				//no progress bar or interactive job output
 				local.results = fixinatorClient.run(path=arguments.path,config=config);	
-			}
+			}*/
+			
+
 			
 		} catch(err) {
 			if (err.type == "FixinatorClient") {
@@ -111,9 +147,7 @@ component extends="commandbox.system.BaseCommand" aliases="combover" excludeFrom
 
 			if (len(arguments.resultFile)) {
 				arguments.resultFile = fileSystemUtil.resolvePath( arguments.resultFile );
-				if (arguments.resultFormat == "json") {
-					fileWrite(arguments.resultFile, serializeJSON(local.results));
-				}
+				fixinatorReport.generateReport(resultFile=arguments.resultFile, format=arguments.resultFormat, listBy=arguments.listBy, data=local.results);
 			}
 
 			local.resultsByType = {};

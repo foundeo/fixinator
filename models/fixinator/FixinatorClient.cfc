@@ -18,8 +18,8 @@ component singleton="true" {
 		var percentValue = 0;
 		var hasProgressBar = isObject(arguments.progressBar);
 		var hasJob = isObject(arguments.job);
-
-		if (fileExists(getDirectoryFromPath(arguments.path) & ".fixinator.json")) {
+		var baseDir = getDirectoryFromPath(arguments.path);
+		if (fileExists(baseDir & ".fixinator.json")) {
 			local.fileConfig = fileRead(getDirectoryFromPath(arguments.path) & ".fixinator.json");
 			if (isJSON(local.fileConfig)) {
 				local.fileConfig = deserializeJSON(local.fileConfig);
@@ -66,7 +66,7 @@ component singleton="true" {
 						payload = {"config"=arguments.config, "files"=[]};
 					} else {
 						size+= local.fileInfo.size;
-						payload.files.append({"path":replace(local.f, arguments.path, ""), "data":(local.ext == "jar") ? "" : fileRead(local.f), "sha1":fileSha1(local.f)});
+						payload.files.append({"path":replace(local.f, baseDir, ""), "data":(local.ext == "jar") ? "" : fileRead(local.f), "sha1":fileSha1(local.f)});
 					}
 				}
 			} else {
@@ -120,7 +120,7 @@ component singleton="true" {
 		} else if (httpResult.statusCode contains "429") { 
 			//TOO MANY REQUESTS
 			if (arguments.isRetry == 1) {
-				throw(message="Fixinator API Returned 429 Status Code (Too Many Requests). Please try again shortly or contact Foundeo Inc. if the problem persists.");
+				throw(message="Fixinator API Returned 429 Status Code (Too Many Requests). Please try again shortly or contact Foundeo Inc. if the problem persists.", type="FixinatorClient");
 			} else {
 				//retry it once
 				return sendPayload(payload=arguments.payload, isRetry=1);
@@ -128,7 +128,7 @@ component singleton="true" {
 		} else if (httpResult.statusCode contains "502") { 
 			//BAD GATEWAY - lambda timeout issue
 			if (arguments.isRetry == 1) {
-				throw(message="Fixinator API Returned 502 Status Code (Bad Gateway). Please try again shortly or contact Foundeo Inc. if the problem persists.");
+				throw(message="Fixinator API Returned 502 Status Code (Bad Gateway). Please try again shortly or contact Foundeo Inc. if the problem persists.", type="FixinatorClient");
 			} else {
 				//retry it once
 				return sendPayload(payload=arguments.payload, isRetry=1);
@@ -140,7 +140,7 @@ component singleton="true" {
 		if (httpResult.statusCode does not contain "200") {
 			throw(message="API Returned non 200 Status Code (#httpResult.statusCode#)", detail=httpResult.fileContent, type="FixinatorClient");
 		}
-		
+
 		return deserializeJSON(httpResult.fileContent);
 	}
 
@@ -154,10 +154,16 @@ component singleton="true" {
 
 	public function filterPaths(baseDirectory, paths, config) {
 		var f = "";
-		var ignoredPaths = [];
+		var ignoredPaths = ["/.git/","\.git\","/.svn/","\.svn\", ".git/"];
+		var ignoredExtensions = ["jpg","png","txt","pdf","doc","docx","gif","css","zip","bak","exe","pack","log","csv","xsl","xslx","psd","ai"];
 		var filteredPaths = [];
-		if (arguments.config.keyExists("ignoredPaths")) {
-			ignoredPaths = arguments.config.ignoredPaths;
+		//always ignore git paths
+		if (arguments.config.keyExists("ignoredPaths") && arrayLen(arguments.config.ignoredPaths)) {
+			arrayAppend(ignoredPaths, arguments.config.ignoredPaths, true);
+		}
+		//always ignore certain extensions
+		if (arguments.config.keyExists("ignoredExtensions") && arrayLen(arguments.config.ignoredExtensions)) {
+			arrayAppend(ignoredExtensions, arguments.config.ignoredExtensions, true);
 		}
 		for (f in paths) {
 			if (directoryExists(f)) {
@@ -168,11 +174,9 @@ component singleton="true" {
 			local.fileName = getFileFromPath(f);
 			local.ext = listLast(local.fileName, ".");
 
-			//certain extensions are ignored
-			if (listFindNoCase("jpg,png,txt,pdf,doc,docx,gif,css,zip,bak,exe,pack", local.ext)) {
-				continue; //skip
+			if (arrayFindNoCase(ignoredExtensions, local.ext)) {
+				continue;
 			}
-
 
 			for (local.ignore in ignoredPaths) {
 				if (find(local.ignore, local.p) != 0) {
@@ -263,11 +267,11 @@ component singleton="true" {
 
 	public struct function getDefaultConfig() {
 		return {
-			"ignoredPaths":["/.git/","\.git\","/.svn/","\.svn\", ".git/"],
+			"ignoredPaths":[],
 			"ignoredExtensions":[],
 			"ignoreScanners":[],
 			"minSeverity": "low",
-			"minConfidence": "low"
+			"minConfidence": "high"
 		};
 	}
 

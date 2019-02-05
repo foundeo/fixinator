@@ -23,7 +23,7 @@ component extends="commandbox.system.BaseCommand" aliases="combover" excludeFrom
 	* @ignoreScanners.hint A comma seperated list of scanner ids to ignore
 	* @autofix.hint Use either off, prompt or automatic
 	**/
-	function run( required string path, string resultFile, string resultFormat="json", boolean verbose=true, string listBy="type", string severity="low", string confidence="high", string ignoreScanners="", autofix="off")  {
+	function run( required string path, string resultFile, string resultFormat="json", boolean verbose=true, string listBy="type", string severity="default", string confidence="default", string ignoreScanners="", autofix="off")  {
 		var fileInfo = "";
 		var severityLevel = 1;
 		var confLevel = 1;
@@ -46,15 +46,20 @@ component extends="commandbox.system.BaseCommand" aliases="combover" excludeFrom
 
 
 		if (!listFindNoCase("warn,low,medium,high", arguments.severity)) {
-			print.redLine("Invalid minimum severity level, use: warn,low,medium,high");
-			return;
+			if (arguments.severity !="default") {
+				print.redLine("Invalid minimum severity level, use: warn,low,medium,high");
+				return;
+			}
 		} else {
 			config.minSeverity = arguments.severity;
 		}
 
 		if (!listFindNoCase("none,low,medium,high", arguments.confidence)) {
-			print.redLine("Invalid minimum confidence level, use: none,low,medium,high");
-			return;
+			if (arguments.confidence != "default") {
+				print.redLine("Invalid minimum confidence level, use: none,low,medium,high");
+				return;	
+			}
+			
 		} else {
 			config.minConfidence = arguments.confidence;
 		}
@@ -126,6 +131,9 @@ component extends="commandbox.system.BaseCommand" aliases="combover" excludeFrom
 
 			
 		} catch(err) {
+			cflock(name="fixinator-command-lock", type="exclusive", timeout="5") {
+				variables.fixinatorRunning = false;
+			}
 			if (err.type == "FixinatorClient") {
 				print.line().boldRedLine("---- Fixinator Client Error ----").line();
 				print.redLine(err.message);

@@ -150,6 +150,13 @@ component extends="commandbox.system.BaseCommand" aliases="combover" excludeFrom
 
 		if (arrayLen(local.results.results) == 0 && arrayLen(local.results.warnings) == 0)   {
 			print.boldGreenLine("0 Issues Found");
+			if (arguments.verbose) {
+				if (local.results.config.minSeverity != "low" && local.results.config.minConfidence != "low") {
+					print.line().greenLine("Tip: For additional results try decreasing the severity or confidence level to medium or low");
+					print.greenLine("    Currently: severity=#local.results.config.minSeverity# confidence=#local.results.config.minConfidence# ")	
+				}
+				
+			}
 		} else {
 			print.boldRedLine("FINDINGS: " & arrayLen(local.results.results));
 

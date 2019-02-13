@@ -98,7 +98,7 @@ component singleton="true" {
 		if (hasProgressBar) {
 			progressBar.update( percent=100, currentCount=arrayLen(files), totalCount=arrayLen(files) );	
 		}
-		
+		results["config"] = payload.config;
 		return results;
 	}
 

@@ -30,7 +30,7 @@ component extends="commandbox.system.BaseCommand" aliases="combover" excludeFrom
 		var config = {};
 		var toFix = [];
 		if (arguments.verbose) {
-			print.greenLine("fixinator v1.0.0 built by Foundeo Inc.").line();
+			print.greenLine("fixinator v#fixinatorClient.getClientVersion()# built by Foundeo Inc.").line();
 			print.grayLine("    ___                      _             ");
 			print.grayLine("   / __)                    | |            ");		
 			print.grayLine(" _| |__ ___  _   _ ____   __| |_____  ___  ");
@@ -151,7 +151,7 @@ component extends="commandbox.system.BaseCommand" aliases="combover" excludeFrom
 		if (arrayLen(local.results.results) == 0 && arrayLen(local.results.warnings) == 0)   {
 			print.boldGreenLine("0 Issues Found");
 			if (arguments.verbose) {
-				if (local.results.config.minSeverity != "low" && local.results.config.minConfidence != "low") {
+				if (local.results.config.minSeverity != "low" || local.results.config.minConfidence != "low") {
 					print.line().greenLine("Tip: For additional results try decreasing the severity or confidence level to medium or low");
 					print.greenLine("    Currently: severity=#local.results.config.minSeverity# confidence=#local.results.config.minConfidence# ")	
 				}

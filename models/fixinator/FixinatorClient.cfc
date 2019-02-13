@@ -8,6 +8,10 @@ component singleton="true" {
 	}
 	variables.clientVersion = "1.0.0";
 
+	public function getClientVersion() {
+		return variables.clientVersion;
+	}
+
 	public function run(string path, struct config={}, any progressBar="", any job="") {
 		var files = "";
 		var payload = {"config"=getDefaultConfig(), "files"=[]};

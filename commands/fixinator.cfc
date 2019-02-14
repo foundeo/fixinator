@@ -11,6 +11,8 @@ component extends="commandbox.system.BaseCommand" aliases="combover" excludeFrom
 	property inject="FixinatorClient@fixinator" name="fixinatorClient";
 	property inject="FixinatorReport@fixinator" name="fixinatorReport";
 	property inject="progressBarGeneric" name="progressBar";
+	property name="configService" inject="configService";
+
 
 	/**
 	* @path.hint A file or directory to scan
@@ -39,6 +41,19 @@ component extends="commandbox.system.BaseCommand" aliases="combover" excludeFrom
 			print.grayLine("  |_|  \___/|____/|_| |_|\____|_____)\___/ ");
 			print.grayLine("                                         inc.");
 			print.line();
+		}
+
+		if (configService.getSetting("modules.fixinator.api_key", "UNDEFINED") != "UNDEFINED") {
+			fixinatorClient.setAPIKey(configService.getSetting("modules.fixinator.api_key", "UNDEFINED"));
+		}
+
+		if (fixinatorClient.getAPIKey() == "UNDEFINED") {
+			print.boldOrangeLine("Missing Fixinator API Key");
+			print.orangeLine("  Set via commandbox: config set modules.fixinator.api_key=YOUR_API_KEY");
+			print.orangeLine("  Or set an environment variable FIXINATOR_API_KEY=YOUR_API_KEY");
+			print.line();
+			print.line("To obtain a key visit: https://fixinator.app/")
+			return;
 		}
 
 		arguments.path = fileSystemUtil.resolvePath( arguments.path );

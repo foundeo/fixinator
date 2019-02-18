@@ -42,6 +42,7 @@ component singleton="true" {
 		}
 
 		structAppend(payload.config, arguments.config, true);
+		arguments.config = payload.config;
 		if (pathData.type == "file") {
 			files = [arguments.path];
 		} else {

@@ -6,6 +6,8 @@ component singleton="true" {
 	if (!isNull(variables.system.getenv("FIXINATOR_API_URL"))) {
 		variables.apiURL = variables.system.getenv("FIXINATOR_API_URL");
 	}
+
+	variables.clientUpdate = false;
 	
 	public function getClientVersion() {
 		if (!structKeyExists(variables, "clientVersion")) {
@@ -155,6 +157,9 @@ component singleton="true" {
 		if (httpResult.statusCode does not contain "200") {
 			throw(message="API Returned non 200 Status Code (#httpResult.statusCode#)", detail=httpResult.fileContent, type="FixinatorClient");
 		}
+		if (structKeyExists(httpResult.responseHeader, "X-Client-Update")) {
+			variables.clientUpdate = true;
+		}
 
 		return deserializeJSON(httpResult.fileContent);
 	}
@@ -284,6 +289,9 @@ component singleton="true" {
 		}
 	}
 
+	public function hasClientUpdate() {
+		return variables.clientUpdate;
+	}
 
 
 	public struct function getDefaultConfig() {

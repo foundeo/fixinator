@@ -6,7 +6,7 @@
  * fixinator dirName
  * {code}
  **/
-component extends="commandbox.system.BaseCommand" aliases="combover" excludeFromHelp=false {
+component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 
 	property inject="FixinatorClient@fixinator" name="fixinatorClient";
 	property inject="FixinatorReport@fixinator" name="fixinatorReport";
@@ -252,7 +252,11 @@ component extends="commandbox.system.BaseCommand" aliases="combover" excludeFrom
     								.setOptions( listAppend(local.fixOptions, "skip") )
     								.ask();
     							*/
-    							local.fix = ask(message="Do you want to fix this? Enter [1-#arrayLen(local.i.fixes)#] or no: ");
+    							local.fixOptions = "1-#arrayLen(local.i.fixes)#";
+    							if (arrayLen(local.i.fixes) == 1) {
+    								local.fixOptions = "1";
+    							}
+    							local.fix = ask(message="Do you want to fix this? Enter [#local.fixOptions#] or no: ");
 
 
 								if (isNumeric(local.fix) && local.fix >= 1 && local.fix <= arrayLen(local.i.fixes)) {
@@ -287,12 +291,21 @@ component extends="commandbox.system.BaseCommand" aliases="combover" excludeFrom
 
 			if (arrayLen(toFix) > 0) {
 				print.line();
-				print.boldOrangeLine("FIXING #arrayLen(toFix)# issues");
+				local.msg = "FIXING #arrayLen(toFix)# issue" & ((arrayLen(toFix)>0) ? "s" :"");
+				print.boldOrangeLine(local.msg);
 				local.fixResults = fixinatorClient.fixCode(basePath=arguments.path, fixes=toFix);
 
 			}
 
 
+
+
+		}
+
+		if (fixinatorClient.hasClientUpdate()) {
+			print.line();
+			print.boldGreenLine("Yay! There is a fixinator client update! Please run the following command to update your client:");
+			print.boldGreenLine("    box update fixinator");
 		}
 
 	}

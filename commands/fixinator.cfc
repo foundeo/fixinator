@@ -52,7 +52,17 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 			print.orangeLine("  Set via commandbox: config set modules.fixinator.api_key=YOUR_API_KEY");
 			print.orangeLine("  Or set an environment variable FIXINATOR_API_KEY=YOUR_API_KEY");
 			print.line();
-			print.line("To obtain a key visit: https://fixinator.app/")
+			print.line("For details please visit: https://fixinator.app/");
+			print.line();
+			local.email = ask(message="Do you want to request a free key? Please enter your email: ");
+			if (isValid("email", local.email)) {
+				local.phone = ask(message="Phone Number (Optional): ");
+				cfhttp(method="POST", url="https://foundeo.us1.list-manage.com/subscribe/post?u=c10e46f0371b0cedc2340d2d4&id=37b8e52f1a") {
+					cfhttpparam(name="EMAIL", value=local.email, type="formfield");
+					cfhttpparam(name="PHONE", value=local.phone, type="formfield");
+				}
+			}
+
 			return;
 		}
 

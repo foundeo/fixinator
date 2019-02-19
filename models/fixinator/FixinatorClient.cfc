@@ -1,6 +1,6 @@
 component singleton="true" {
 
-	variables.maxPayloadSize = 1 * 512 * 1024;//half mb
+	variables.maxPayloadSize = 1 * 640 * 1024;//half mb+128b
 	variables.apiURL = "https://api.fixinator.app/v1/scan";
 	variables.system = createObject("java", "java.lang.System");
 	if (!isNull(variables.system.getenv("FIXINATOR_API_URL"))) {
@@ -48,6 +48,9 @@ component singleton="true" {
 		if (pathData.type == "file") {
 			files = [arguments.path];
 		} else {
+			if (isFreeAPIKey()) {
+				throw(message="Sorry you can only scan one file at a time using a Free API key. With a purchased key you can scan directories. Visit https://fixinator.app to purchase.", type="FixinatorClient");
+			}
 			files = directoryList(arguments.path, true, "path");
 			files = filterPaths(arguments.path, files, payload.config);	
 		}
@@ -55,12 +58,13 @@ component singleton="true" {
 			fileCounter++;
 			if (fileExists(local.f)) {
 				local.fileInfo = getFileInfo(local.f);
-				if (local.fileInfo.canRead) {
-					if (local.fileInfo.size > variables.maxPayloadSize) {
+				if (local.fileInfo.canRead && local.fileInfo.type == "file") {
+					local.ext = listLast(local.f, ".");
+					if (local.fileInfo.size > variables.maxPayloadSize && local.ext != "jar") {
 						results.warnings.append( { "message":"File was too large, #local.fileInfo.size# bytes, max: #variables.maxPayloadSize#", "path":local.f } );
 						continue;
 					} else {
-						local.ext = listLast(local.f, ".");
+						
 						if (size + local.fileInfo.size > variables.maxPayloadSize) {
 							if (hasJob) {
 								job.start( ' Scanning Payload (#arrayLen(payload.files)# of #arrayLen(files)# files) this may take a sec...' );
@@ -172,6 +176,10 @@ component singleton="true" {
 		} else {
 			return "UNDEFINED";
 		}
+	}
+
+	public boolean function isFreeAPIKey() {
+		return left(getAPIKey(), 2) == "fr";
 	}
 
 	public function setAPIKey(string key) {

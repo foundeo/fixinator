@@ -3,10 +3,10 @@
  * .
  * Examples
  * {code:bash}
- * fixinator dirName
+ * fixinator path
  * {code}
  **/
-component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
+component extends="commandbox.system.BaseCommand" aliases="audit" excludeFromHelp=false {
 
 	property inject="FixinatorClient@fixinator" name="fixinatorClient";
 	property inject="FixinatorReport@fixinator" name="fixinatorReport";
@@ -25,7 +25,7 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 	* @ignoreScanners.hint A comma seperated list of scanner ids to ignore
 	* @autofix.hint Use either off, prompt or automatic
 	**/
-	function run( required string path, string resultFile, string resultFormat="json", boolean verbose=true, string listBy="type", string severity="default", string confidence="default", string ignoreScanners="", autofix="off")  {
+	function run( string path="default", string resultFile, string resultFormat="json", boolean verbose=true, string listBy="type", string severity="default", string confidence="default", string ignoreScanners="", autofix="off")  {
 		var fileInfo = "";
 		var severityLevel = 1;
 		var confLevel = 1;
@@ -57,13 +57,27 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 			local.email = ask(message="Do you want to request a free key? Please enter your email: ");
 			if (isValid("email", local.email)) {
 				local.phone = ask(message="Phone Number (Optional): ");
-				cfhttp(method="POST", url="https://foundeo.us1.list-manage.com/subscribe/post?u=c10e46f0371b0cedc2340d2d4&id=37b8e52f1a") {
+				cfhttp(method="POST", url="https://foundeo.us1.list-manage.com/subscribe/post?u=c10e46f0371b0cedc2340d2d4&id=37b8e52f1a", result="local.httpResult") {
 					cfhttpparam(name="EMAIL", value=local.email, type="formfield");
 					cfhttpparam(name="PHONE", value=local.phone, type="formfield");
+				}
+				if (local.httpResult.statusCode contains "200") {
+					print.boldGreenLine("Thanks, your request has been submitted.");
+				} else {
+					print.boldRedLine("Looks like there was an error submitting your request, please contact Foundeo inc. directly.");
 				}
 			}
 
 			return;
+		}
+
+		if (arguments.path == "default") {
+			if (fileExists(fileSystemUtil.resolvePath("./box.json"))) {
+				print.line("Auditing box.json dependencies...");
+				arguments.path = "./box.json";
+			} else { 
+				arguments.path = ".";
+			}
 		}
 
 		arguments.path = fileSystemUtil.resolvePath( arguments.path );
@@ -226,9 +240,13 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 					if (arguments.verbose) {
 						print.line();
 						local.conf = "";
+						
 						if (local.i.keyExists("confidence") && local.i.confidence > 0 && local.i.confidence <=3) {
 							local.confMap = ["low confidence", "medium confidence", "high confidence"];
 							local.conf = " " & local.confMap[local.i.confidence];
+							if (local.i.confidence == 3) {
+								local.possible = "";
+							}
 						}
 						if (local.i.severity == 3) {
 							print.redLine("#chr(9)#[HIGH] #local.i.message##local.conf#");
@@ -238,6 +256,9 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 							print.aquaLine("#chr(9)#[LOW] #local.i.message##local.conf#");
 						} else {
 							print.yellowLine("#chr(9)#[WARN] #local.i.message##local.conf#");
+						}
+						if (local.i.keyExists("description") && len(local.i.description)) {
+							print.line(chr(9) & local.i.description);
 						}
 						if (len(local.i.context)) {
 							print.greyLine("#chr(9)##local.i.context#");

@@ -144,15 +144,17 @@ component singleton="true" {
 				throw(message="Fixinator API Returned 429 Status Code (Too Many Requests). Please try again shortly or contact Foundeo Inc. if the problem persists.", type="FixinatorClient");
 			} else {
 				//retry it once
+				sleep(500);
 				return sendPayload(payload=arguments.payload, isRetry=1);
 			}
 		} else if (httpResult.statusCode contains "502") { 
 			//BAD GATEWAY - lambda timeout issue
-			if (arguments.isRetry == 1) {
+			if (arguments.isRetry >= 2) {
 				throw(message="Fixinator API Returned 502 Status Code (Bad Gateway). Please try again shortly or contact Foundeo Inc. if the problem persists.", type="FixinatorClient");
 			} else {
-				//retry it once
-				return sendPayload(payload=arguments.payload, isRetry=1);
+				//retry it
+				sleep(500);
+				return sendPayload(payload=arguments.payload, isRetry=arguments.isRetry+1);
 			}
 		}
 		if (!isJSON(httpResult.fileContent)) {
@@ -316,6 +318,7 @@ component singleton="true" {
 		var fIn = createObject("java", "java.io.FileInputStream").init(path);
 		return createObject("java", "org.apache.commons.codec.digest.DigestUtils").sha1Hex(fIn);
 	}
+
 
 
 

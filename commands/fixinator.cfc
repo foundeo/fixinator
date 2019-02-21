@@ -335,7 +335,7 @@ component extends="commandbox.system.BaseCommand" aliases="audit" excludeFromHel
 
 
 
-
+			setExitCode( 1 );
 		}
 
 		if (fixinatorClient.hasClientUpdate()) {
@@ -343,6 +343,8 @@ component extends="commandbox.system.BaseCommand" aliases="audit" excludeFromHel
 			print.boldGreenLine("Yay! There is a fixinator client update! Please run the following command to update your client:");
 			print.boldGreenLine("    box update fixinator");
 		}
+
+
 
 	}
 

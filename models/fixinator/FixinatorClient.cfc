@@ -1,7 +1,7 @@
 component singleton="true" {
 
 	variables.maxPayloadSize = 1 * 640 * 1024;//half mb+128b
-	variables.maxPayloadFileCount = 25;
+	variables.maxPayloadFileCount = 35;
 	variables.apiURL = "https://api.fixinator.app/v1/scan";
 	variables.system = createObject("java", "java.lang.System");
 	if (!isNull(variables.system.getenv("FIXINATOR_API_URL"))) {
@@ -124,9 +124,13 @@ component singleton="true" {
 		return results;
 	}
 
+	public function getAPIURL() {
+		return variables.apiURL;
+	}
+
 	public function sendPayload(payload, isRetry=0) {
 		var httpResult = "";
-		cfhttp(url=variables.apiURL, method="POST", result="httpResult") {
+		cfhttp(url=getAPIURL(), method="POST", result="httpResult") {
 			cfhttpparam(type="header", name="Content-Type", value="application/json");
 			cfhttpparam(type="header", name="x-api-key", value=getAPIKey());
 			cfhttpparam(type="header", name="X-Client-Version", value=getClientVersion());

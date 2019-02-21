@@ -71,6 +71,29 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 			return;
 		}
 
+		if (configService.getSetting("modules.fixinator.accept_policy", "UNDEFINED") == "UNDEFINED") {
+			print.line();
+			print.line("Fixinator will send source code to: " & fixinatorClient.getAPIURL());
+			print.line("for scanning. The code is kept in RAM during scanning and is not persisted.");
+			print.line();
+			print.line("Note: The enterprise version allows you to run the code scanner on your own servers.");
+			if (isRunningInCI()) {
+				print.line("Detected CI Environment, I will continue without prompting");
+			} else {
+				local.response = ask("Please type ok or hit enter to accept (ok):");
+				if (len(local.response) == 0 || local.response == "ok") {
+					print.greenLine("✓ Policy accepted.");
+					command("config set").params("modules.fixinator.accept_policy"="yes").run();
+				} else {
+					print.redLine("Canceling scan request.");
+					setExitCode(1);
+					return;
+				}
+			}
+			
+		}
+
+
 		
 		arguments.path = fileSystemUtil.resolvePath( arguments.path );
 
@@ -345,6 +368,18 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 
 
 
+	}
+
+	private boolean function isRunningInCI() {
+		var env = server.system.environment;
+		if (env.keyExists("CI") && isBoolean(env.CI) && env.CI) {
+			return true;
+		}
+		if (env.keyExists("CONTINUOUS_INTEGRATION") && isBoolean(env.CONTINUOUS_INTEGRATION) && env.CONTINUOUS_INTEGRATION) {
+			return true;
+		}
+
+		return false;
 	}
 
 }

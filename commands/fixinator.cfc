@@ -124,6 +124,7 @@ component extends="commandbox.system.BaseCommand" aliases="audit" excludeFromHel
 		
 		try {
 			
+			
 			if (arguments.verbose) {
 				//show status dots
 				variables.fixinatorRunning = true;
@@ -145,7 +146,6 @@ component extends="commandbox.system.BaseCommand" aliases="audit" excludeFromHel
 			}
 
 			local.results = fixinatorClient.run(path=arguments.path,config=config);	
-
 			if (arguments.verbose) {
 				//stop status indicator
 				cflock(name="fixinator-command-lock", type="exclusive", timeout="5") {
@@ -155,13 +155,17 @@ component extends="commandbox.system.BaseCommand" aliases="audit" excludeFromHel
 				thread action="terminate", name="#variables.fixinatorThread#";
 				print.line();
 			}
-			/*
+			
+			/* progress bar version
 			if (arguments.verbose) {
-					//show progress bars
-					//job.start("Scanning " & arguments.path);
+				//show progress bars
+				print.line().toConsole();
+				progressBar.clear();
+				job.start("Scanning " & arguments.path);
 				progressBar.update( percent=0 );
 				local.results = fixinatorClient.run(path=arguments.path,config=config, progressBar=progressBar);	
-				//job.complete();	
+				progressBar.clear();
+				job.complete();	
 			} else {
 				//no progress bar or interactive job output
 				local.results = fixinatorClient.run(path=arguments.path,config=config);	
@@ -208,7 +212,7 @@ component extends="commandbox.system.BaseCommand" aliases="audit" excludeFromHel
 			for (local.i in local.results.results) {
 				local.typeKey = "";
 				if (arguments.listBy == "type") {
-					local.typeKey = local.i.id;
+					local.typeKey = local.i.title & " [" & local.i.id & "]";
 				} else {
 					local.typeKey = local.i.path;
 				}
@@ -219,7 +223,8 @@ component extends="commandbox.system.BaseCommand" aliases="audit" excludeFromHel
 			}
 
 			for (local.typeKey in local.resultsByType) {
-				print.boldRedLine(local.typeKey);
+
+				print.boldYellowLine(local.typeKey);
 				for (local.i in local.resultsByType[local.typeKey]) {
 					if (arguments.listBy == "type") {
 						local.line = "#local.i.path#:#local.i.line#";

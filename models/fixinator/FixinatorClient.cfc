@@ -1,6 +1,7 @@
 component singleton="true" {
 
 	variables.maxPayloadSize = 1 * 640 * 1024;//half mb+128b
+	variables.maxPayloadFileCount = 25;
 	variables.apiURL = "https://api.fixinator.app/v1/scan";
 	variables.system = createObject("java", "java.lang.System");
 	if (!isNull(variables.system.getenv("FIXINATOR_API_URL"))) {
@@ -65,7 +66,7 @@ component singleton="true" {
 						continue;
 					} else {
 						
-						if (size + local.fileInfo.size > variables.maxPayloadSize) {
+						if (size + local.fileInfo.size > variables.maxPayloadSize || arrayLen(payload.files) > variables.maxPayloadFileCount) {
 							if (hasJob) {
 								job.start( ' Scanning Payload (#arrayLen(payload.files)# of #arrayLen(files)# files) this may take a sec...' );
 								if (hasProgressBar) {
@@ -141,7 +142,7 @@ component singleton="true" {
 		} else if (httpResult.statusCode contains "429") { 
 			//TOO MANY REQUESTS
 			if (arguments.isRetry == 1) {
-				throw(message="Fixinator API Returned 429 Status Code (Too Many Requests). Please try again shortly or contact Foundeo Inc. if the problem persists.", type="FixinatorClient");
+				throw(message="Fixinator API Returned 429 Status Code (Too Many Requests). This is usually due to an exceded monthly quote limit. You can either purchase a bigger plan or request a one time limit increase.", type="FixinatorClient");
 			} else {
 				//retry it once
 				sleep(500);

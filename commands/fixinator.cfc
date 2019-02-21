@@ -6,7 +6,7 @@
  * fixinator path
  * {code}
  **/
-component extends="commandbox.system.BaseCommand" aliases="audit" excludeFromHelp=false {
+component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 
 	property inject="FixinatorClient@fixinator" name="fixinatorClient";
 	property inject="FixinatorReport@fixinator" name="fixinatorReport";
@@ -25,7 +25,7 @@ component extends="commandbox.system.BaseCommand" aliases="audit" excludeFromHel
 	* @ignoreScanners.hint A comma seperated list of scanner ids to ignore
 	* @autofix.hint Use either off, prompt or automatic
 	**/
-	function run( string path="default", string resultFile, string resultFormat="json", boolean verbose=true, string listBy="type", string severity="default", string confidence="default", string ignoreScanners="", autofix="off")  {
+	function run( string path=".", string resultFile, string resultFormat="json", boolean verbose=true, string listBy="type", string severity="default", string confidence="default", string ignoreScanners="", autofix="off")  {
 		var fileInfo = "";
 		var severityLevel = 1;
 		var confLevel = 1;
@@ -71,15 +71,7 @@ component extends="commandbox.system.BaseCommand" aliases="audit" excludeFromHel
 			return;
 		}
 
-		if (arguments.path == "default") {
-			if (fileExists(fileSystemUtil.resolvePath("./box.json"))) {
-				print.line("Auditing box.json dependencies...");
-				arguments.path = "./box.json";
-			} else { 
-				arguments.path = ".";
-			}
-		}
-
+		
 		arguments.path = fileSystemUtil.resolvePath( arguments.path );
 
 
@@ -124,7 +116,7 @@ component extends="commandbox.system.BaseCommand" aliases="audit" excludeFromHel
 		
 		try {
 			
-			
+			/*
 			if (arguments.verbose) {
 				//show status dots
 				variables.fixinatorRunning = true;
@@ -154,9 +146,9 @@ component extends="commandbox.system.BaseCommand" aliases="audit" excludeFromHel
 				}
 				thread action="terminate", name="#variables.fixinatorThread#";
 				print.line();
-			}
+			}*/
 			
-			/* progress bar version
+			/* progress bar version */
 			if (arguments.verbose) {
 				//show progress bars
 				print.line().toConsole();
@@ -165,11 +157,10 @@ component extends="commandbox.system.BaseCommand" aliases="audit" excludeFromHel
 				progressBar.update( percent=0 );
 				local.results = fixinatorClient.run(path=arguments.path,config=config, progressBar=progressBar);	
 				progressBar.clear();
-				job.complete();	
 			} else {
 				//no progress bar or interactive job output
 				local.results = fixinatorClient.run(path=arguments.path,config=config);	
-			}*/
+			}
 			
 
 			
@@ -178,6 +169,9 @@ component extends="commandbox.system.BaseCommand" aliases="audit" excludeFromHel
 				variables.fixinatorRunning = false;
 			}
 			if (err.type == "FixinatorClient") {
+				if (arguments.verbose) {
+					progressBar.clear();
+				}
 				print.line().boldRedLine("---- Fixinator Client Error ----").line();
 				print.redLine(err.message);
 				if (structKeyExists(err, "detail")) {
@@ -186,6 +180,11 @@ component extends="commandbox.system.BaseCommand" aliases="audit" excludeFromHel
 				return;
 			} else {
 				rethrow;
+			}
+		} finally {
+			if (arguments.verbose) {
+				progressBar.clear();
+				job.complete();	
 			}
 		}
 		

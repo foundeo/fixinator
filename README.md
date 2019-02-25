@@ -25,8 +25,8 @@ The `FIXINATOR_API_URL` environment variable points to the URL of the Fixinator 
 A `.fixinator.json` configuration file can be placed in the root of a folder to be scanned. For Example:
 
 	{
-		"ignoredPaths":["some/folder-to-ignore", "some/file-to-ignore.cfm"],
-		"ignoredExtensions":["ign","ore"],
+		"ignorePaths":["some/folder-to-ignore", "some/file-to-ignore.cfm"],
+		"ignoreExtensions":["ign","ore"],
 		"ignoreScanners":[],
 		"minSeverity": "low",
 		"minConfidence": "low"
@@ -34,11 +34,11 @@ A `.fixinator.json` configuration file can be placed in the root of a folder to 
 
 Note that `.fixinator.json` files placed in a subfolder of the base scan path are currently ignored.
 
-### ignoredPaths
+### ignorePaths
 
 An array of path patterns to ignore. Certain paths are always ignored such as `.git` or `.svn` paths.
 
-### ignoredExtensions
+### ignoreExtensions
 
 An array of file extensions to ignore. Certain file extensions such as image files (png, gif, jpg, etc) are always ignored.
 

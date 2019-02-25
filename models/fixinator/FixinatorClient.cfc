@@ -199,12 +199,12 @@ component singleton="true" {
 		var ignoredExtensions = ["jpg","png","txt","pdf","doc","docx","gif","css","zip","bak","exe","pack","log","csv","xsl","xslx","psd","ai"];
 		var filteredPaths = [];
 		//always ignore git paths
-		if (arguments.config.keyExists("ignoredPaths") && arrayLen(arguments.config.ignoredPaths)) {
-			arrayAppend(ignoredPaths, arguments.config.ignoredPaths, true);
+		if (arguments.config.keyExists("ignorePaths") && arrayLen(arguments.config.ignorePaths)) {
+			arrayAppend(ignoredPaths, arguments.config.ignorePaths, true);
 		}
 		//always ignore certain extensions
-		if (arguments.config.keyExists("ignoredExtensions") && arrayLen(arguments.config.ignoredExtensions)) {
-			arrayAppend(ignoredExtensions, arguments.config.ignoredExtensions, true);
+		if (arguments.config.keyExists("ignoreExtensions") && arrayLen(arguments.config.ignoreExtensions)) {
+			arrayAppend(ignoredExtensions, arguments.config.ignoreExtensions, true);
 		}
 		for (f in paths) {
 			if (directoryExists(f)) {
@@ -311,8 +311,8 @@ component singleton="true" {
 
 	public struct function getDefaultConfig() {
 		return {
-			"ignoredPaths":[],
-			"ignoredExtensions":[],
+			"ignorePaths":[],
+			"ignoreExtensions":[],
 			"ignoreScanners":[],
 			"minSeverity": "low",
 			"minConfidence": "high"

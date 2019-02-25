@@ -8,6 +8,36 @@ When running the `fixinator` command via the command line you can set the follow
 
 The folder or file to scan.
 
+### confidence
+
+Default: `high` 
+
+Possible values are `none`, `low`, `medium` or `high`. This setting is used to filter out results that the scanner is not confident about. Setting it to a lower value will show more issues but may have some false positives.
+
+### severity
+
+Default: `low`
+
+Possible values are: `low`, `medium` or `high`. Filter by severity of the issues found.
+
+### autofix
+
+Default: `off`
+
+* `off` - does not fix code
+* `prompt` - prompts at each issue that can be fixed, if you select a fix the file will be updated with the fix code
+* `auto` - does not prompt, it will fix each issue with the first choice
+
+It is highly recommended that you use `autofix` only with code that is under version control so you can review the diff.
+
+### resultFile
+
+Writes results to a file specified by the path in resultFile.
+
+### resultFormat
+
+Specify either json (default), html or pdf.
+
 ## Environment Variables
 
 The following environment variables are used by fixinator:

@@ -16,8 +16,8 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 
 	/**
 	* @path.hint A file or directory to scan
-	* @resultFile.hint A file path to write JSON results to
-	* @resultFormat.hint The format to write the results in [json]
+	* @resultFile.hint A file path to write the results to - see resultFormat
+	* @resultFormat.hint The format to write the results in [json,html,pdf]
 	* @verbose.hint When false limits the output
 	* @listBy.hint Show results by type or file
 	* @severity.hint The minimum severity warn, low, medium or high

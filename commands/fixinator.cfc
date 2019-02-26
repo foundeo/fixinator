@@ -17,7 +17,7 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 	/**
 	* @path.hint A file or directory to scan
 	* @resultFile.hint A file path to write the results to - see resultFormat
-	* @resultFormat.hint The format to write the results in [json,html,pdf]
+	* @resultFormat.hint The format to write the results in [json,html,pdf,junit]
 	* @verbose.hint When false limits the output
 	* @listBy.hint Show results by type or file
 	* @severity.hint The minimum severity warn, low, medium or high
@@ -54,6 +54,22 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 			print.line();
 			print.line("For details please visit: https://fixinator.app/");
 			print.line();
+			if (isRunningInCI()) {
+				//in CI we don't want to prompt
+				print.line("Detected CI Envrionment. Please add the FIXINATOR_API_KEY as a secure environment variable to your CI platform.");
+
+				if (isTravisCI()) {
+					print.line("Documentation: https://github.com/foundeo/fixinator/wiki/Running-Fixinator-on-Travis-CI");
+				}
+
+				if (isBitbucketPipeline()) {
+					print.line("Documentation: https://github.com/foundeo/fixinator/wiki/Running-Fixinator-on-Bitbucket");	
+				}
+
+				setExitCode(1);
+			} else {
+
+			}
 			local.email = ask(message="Do you want to request a free key? Please enter your email: ");
 			if (isValid("email", local.email)) {
 				local.phone = ask(message="Phone Number (Optional): ");
@@ -380,6 +396,18 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 		}
 
 		return false;
+	}
+
+	private boolean function isTravisCI() {
+		return server.system.environment.keyExists("TRAVIS") && server.system.environment.TRAVIS;
+	}
+
+	private boolean function isCircleCI() {
+		return server.system.environment.keyExists("CIRCLECI") && server.system.environment.CIRCLECI;
+	}
+
+	private boolean function isBitbucketPipeline() {
+		return server.system.environment.keyExists("BITBUCKET_BUILD_NUMBER");
 	}
 
 }

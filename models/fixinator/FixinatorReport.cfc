@@ -11,6 +11,8 @@
 			<cfset fileWrite(arguments.resultFile, generateHTMLReport(data=arguments.data, listBy=arguments.listBy))>
 		<cfelseif format IS "pdf">
 			<cfdocument format="PDF" filename="#arguments.resultFile#" overwrite="true"><cfoutput>#generateHTMLReport(data=arguments.data, listBy=arguments.listBy)#</cfoutput></cfdocument>
+		<cfelseif format IS "junit">
+			<cfset fileWrite(arguments.resultFile, generateJUnitReport(data=arguments.data))>
 		<cfelse>
 			<cfthrow message="Unsupported result file format">
 		</cfif>
@@ -124,6 +126,55 @@
 			</body>
 		</cfsavecontent>	
 		<cfreturn html>
+	</cffunction>
+
+	<cffunction name="generateJUnitReport" returntype="string" output="false">
+		<cfargument name="data">
+		<cfset var xml = "">
+		<cfset var resultsByScanner = {}>
+		<cfset var scannerCounts = {}>
+		<cfset var totalTypes = 0>
+		<cfset var typeTitle = {}>
+		<cfset var typeKey = "">
+		<cfset var result = "">
+		<!--- sort into types --->
+		<cfloop array="#arguments.data.results#" index="local.i">
+			<cfset local.scanner = local.i.scanner>
+			<cfif NOT resultsByScanner.keyExists(local.scanner)>
+				<cfset resultsByScanner[local.scanner] = {}>
+				<cfset scannerCounts[local.scanner] = 0>
+			</cfif>
+			<cfset local.typeKey = local.i.id>
+			<cfif NOT resultsByScanner[local.scanner].keyExists(local.typeKey)>
+				<cfset resultsByScanner[local.scanner][local.typeKey] = []>
+				<cfset totalTypes = totalTypes + 1>
+				<cfif local.i.keyExists("title")>
+					<cfset typeTitle[local.i.id] = local.i.title>
+				<cfelse>
+					<cfset typeTitle[local.i.id] = local.i.id>
+				</cfif>
+			</cfif>
+			<cfset scannerCounts[local.scanner] = scannerCounts[local.scanner]+1>
+			<cfset arrayAppend(resultsByScanner[local.scanner][local.typeKey], local.i)>
+		</cfloop>
+		<cfsavecontent variable="xml"><?xml version="1.0" encoding="UTF-8" ?>
+			<cfoutput>
+			<testsuites id="#dateTimeFormat(now(), 'yyyymmdd-HHmmss')#" name="Fixinator Scan Results (#dateTimeFormat(now(), 'yyyy-mm-dd HH:mm:ss')#" tests="#int(totalTypes)#" failures="#arrayLen(data.results)#" time="0">
+				<cfloop list="#structKeyList(resultsByScanner)#" index="local.scanner">
+					<testsuite id="#encodeForXML(local.scanner)#" name="#encodeForXML(local.scanner)#" tests="#structCount(resultsByScanner[local.scanner])#" failures="#scannerCounts[local.scanner]#" time="0">
+						<cfloop list="#structKeyList(resultsByScanner[local.scanner])#" index="local.typeKey">
+							<testcase id="#encodeForXMLAttribute(local.typeKey)#" name="#typeTitle[local.typeKey]# [#local.typeKey#]" time="0">
+								<cfloop array="#resultsByScanner[local.scanner][local.typeKey]#" index="result">
+									<failure message="#encodeForXMLAttribute(result.message)#" type="#getIndicatorAsText(result.severity)#">#getIndicatorAsText(result.severity)#: #encodeForXML(result.message)##chr(10)#File: #encodeForXML(result.path)##chr(10)#Line: #encodeForXML(result.line)#</failure>
+								</cfloop>
+							</testcase>
+						</cfloop>
+					</testsuite>
+				</cfloop>
+			</testsuites>
+			</cfoutput>
+		</cfsavecontent>
+		<cfreturn xml>
 	</cffunction>	
 
 	<cffunction name="getIndicatorAsText" access="private">

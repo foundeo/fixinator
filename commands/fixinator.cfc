@@ -12,6 +12,7 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 	property inject="FixinatorReport@fixinator" name="fixinatorReport";
 	property inject="progressBarGeneric" name="progressBar";
 	property name="configService" inject="configService";
+	property name="shell" inject="shell";
 
 
 	/**
@@ -261,24 +262,47 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 			}
 
 			for (local.typeKey in local.resultsByType) {
-
-				print.boldYellowLine(local.typeKey);
+				if (arguments.verbose) {
+					print.boldYellowLine(repeatString("-", 65));	
+				}
+				if (arguments.listBy == "type" && shell.getTermWidth() >= 65 && arguments.verbose) {
+					if (len(local.typeKey) > 61) {
+						print.boldYellowLine("| " & left(local.typeKey, 61) & " |");
+					} else {
+						print.boldYellowLine("| " & left(local.typeKey, 61) & repeatString(" ", 61-len(local.typeKey)) & " |");		
+					}
+					
+				} else {
+					print.boldYellowLine(local.typeKey);
+				}
+				if (arguments.verbose) {
+					print.boldYellowLine(repeatString("-", 65));	
+				}
+				
+				local.firstOfType = true;
 				for (local.i in local.resultsByType[local.typeKey]) {
+					if (!local.firstOfType && arguments.verbose) {
+						print.line();
+						//print.grayLine(repeatString("-", shell.getTermWidth()));
+					} else {
+						local.firstOfType = false;
+					}
 					if (arguments.listBy == "type") {
 						local.line = "#local.i.path#:#local.i.line#";
 						
 					} else {
-						local.line = "[#local.i.id#] on line #local.i.line#";
+						local.line = "#local.i.title# [#local.i.id#] on line #local.i.line#";
 					}
+					/*
 					if (local.i.severity == 3) {
-						print.redLine("#chr(9)##local.line#");
+						print.redLine("#local.line#");
 					} else if (local.i.severity == 2) {
-						print.magentaLine("#chr(9)##local.line#");
+						print.magentaLine("#local.line#");
 					} else if (local.i.severity == 1) {
-						print.aquaLine("#chr(9)##local.line#");
+						print.aquaLine("#local.line#");
 					} else {
-						print.yellowLine("#chr(9)##local.line#");
-					}
+						print.yellowLine("#local.line#");
+					}*/
 					
 					if (arguments.verbose) {
 						print.line();
@@ -292,31 +316,39 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 							}
 						}
 						if (local.i.severity == 3) {
-							print.redLine("#chr(9)#[HIGH] #local.i.message##local.conf#");
+							print.redBoldLine("[HIGH] #local.i.message##local.conf#");
+							//print.redBoldLine(repeatString("-", shell.getTermWidth()));
 						} else if (local.i.severity == 2) {
-							print.magentaLine("#chr(9)#[MEDIUM] #local.i.message##local.conf#");
+							print.magentaBoldLine("[MEDIUM] #local.i.message##local.conf#");
+							//print.magentaBoldLine(repeatString("-", shell.getTermWidth()));
 						} else if (local.i.severity == 1) {
-							print.aquaLine("#chr(9)#[LOW] #local.i.message##local.conf#");
+							print.aquaBoldLine("[LOW] #local.i.message##local.conf#");
+							//print.aquaBoldLine(repeatString("-", shell.getTermWidth()));
 						} else {
-							print.yellowLine("#chr(9)#[WARN] #local.i.message##local.conf#");
+							print.yellowBoldLine("[WARN] #local.i.message##local.conf#");
+							//print.aquaBoldLine("[WARN] #local.i.message##local.conf#");
 						}
 						if (local.i.keyExists("description") && len(local.i.description)) {
-							print.line(chr(9) & local.i.description);
-						}
-						if (len(local.i.context)) {
-							print.greyLine("#chr(9)##local.i.context#");
+							print.line(local.i.description);
 						}
 						if (local.i.keyExists("link") && len(local.i.link)) {
-							print.greyLine(chr(9) & local.i.link);
+							print.line("  " & local.i.link);
 						}
+						print.boldLine(local.line);
+						if (len(local.i.context)) {
+							print.boldGrayLine("#repeatString(" ", 5-len(local.i.line))##local.i.line#: #local.i.context#");
+							print.line();
+						}
+						
+						
 						if (local.i.keyExists("fixes") && arrayLen(local.i.fixes) > 0) {
-							print.greyLine("#chr(9)#Possible Fixes:");
+							print.greyLine("Possible Fixes:");
 							local.fixIndex = 0;
 							local.fixOptions = "";
 							for (local.fix in local.i.fixes) {
 								local.fixIndex++;
 								local.fixOptions = listAppend(local.fixOptions, local.fixIndex);
-								print.greyLine(chr(9)&chr(9)&local.fixIndex&": "&local.fix.title & ": " & local.fix.fixCode);
+								print.greyLine("        "&local.fixIndex&") "&local.fix.title & ": " & local.fix.fixCode);
 							}
 							if (arguments.autofix == "prompt") {
 								print.toConsole();
@@ -338,6 +370,11 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 								} 
 
 							}
+						}
+					} else {
+						print.line(local.line);
+						if (local.i.keyExists("context") && len(local.i.context)) {
+							print.grayLine("    " & left(local.i.context, shell.getTermWidth()-4));
 						}
 					}
 				}
@@ -385,6 +422,7 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 
 
 	}
+
 
 	private boolean function isRunningInCI() {
 		var env = server.system.environment;

@@ -81,47 +81,106 @@
 				<h1>Fixinator Scan Results</h1>
 				<p>Report generated on <cfoutput>#dateTimeFormat(now(), "full")#</cfoutput>
 				<cfoutput>
-					<cfif arguments.listBy IS "type">
-						<table border="0" cellspacing="0" cellpadding="8">
-							<tr>
-								<th>Issue Type</th>
-								<th>Occurrences</th>
-							</tr>
-							<cfloop item="typeKey" collection="#resultsByType#"> 
+					<cfif arrayLen(data.results) GT 0>
+						<cfif arguments.listBy IS "type">
+							<table border="0" cellspacing="0" cellpadding="8">
 								<tr>
-									<td>#encodeForHTML(typeKey)#</td>
-									<th><a href="###hash(typeKey, "SHA-256")#">#int(arrayLen(resultsByType[typeKey]))#</a></th>
+									<th>Issue Type</th>
+									<th>Occurrences</th>
 								</tr>
+								<cfloop item="typeKey" collection="#resultsByType#"> 
+									<tr>
+										<td>#encodeForHTML(typeKey)#</td>
+										<th><a href="###hash(typeKey, "SHA-256")#">#int(arrayLen(resultsByType[typeKey]))#</a></th>
+									</tr>
+								</cfloop>
+							</table>
+						</cfif>
+
+						<cfloop item="typeKey" collection="#resultsByType#"> 
+							<h2 class="type-key" id="#hash(typeKey, "SHA-256")#">#encodeForHTML(typeKey)#</h2>
+							<cfloop array="#resultsByType[typeKey]#" index="local.i">
+								<div class="issue">
+									<cfif arguments.listBy IS "type">
+										<h3>#encodeForHTML(local.i.path)#:#int(local.i.line)#</h3>
+									<cfelse>
+										<h3>#encodeForHTML(local.i.id)# on line #int(local.i.line)#</h3>
+									</cfif>
+									<div class="issue-badges">
+										 <span class="badge ind-#int(local.i.severity)#">Severity: #getIndicatorAsText(local.i.severity)#</span>
+										<span class="badge ind-#int(local.i.confidence)#">Confidence: #getIndicatorAsText(local.i.confidence)#</span>
+
+									</div>
+									<cfif local.i.keyExists("message") AND len(local.i.message)>
+										<div class="issue-message">
+											#encodeForHTML(local.i.message)#
+										</div>	
+									</cfif>
+									
+									<cfif len(local.i.context)>
+										<pre class="issue-context">#encodeForHTML(local.i.context)#</pre>
+									</cfif>
+								</div>
 							</cfloop>
+						</cfloop>
+					<cfelse>
+						<p><strong>0 findings.</strong></p>
+					</cfif>
+					<cfif structKeyExists(data, "config")>
+						<h4>Configuration Summary</h4>
+						<table border="0" cellspacing="0" cellpadding="6">
+							<tr>
+								<th align="right">Minimum Severity:</th>
+								<td><cfif structKeyExists(data.config, "minSeverity")>#encodeForHTML(data.config.minSeverity)#<cfelse>-</cfif></td>
+							</tr>
+							<tr>
+								<th align="right">Minimum Confidence:</th>
+								<td><cfif structKeyExists(data.config, "minConfidence")>#encodeForHTML(data.config.minConfidence)#<cfelse>-</cfif></td>
+							</tr>
+							<tr>
+								<th align="right">Ignored Extensions:</th>
+								<td>
+									<cfif structKeyExists(data.config, "ignoreExtensions") AND isArray(data.config.ignoreExtensions)>
+										<cfif arrayLen(data.config.ignoreExtensions) EQ 0>
+											<em>None</em>
+										<cfelse>
+											#encodeForHTML(arrayToList(data.config.ignoreExtensions, ", "))#
+										</cfif>
+									<cfelse>
+										-
+									</cfif>
+								</td>
+							</tr>
+							<tr>
+								<th align="right">Ignored Paths:</th>
+								<td>
+									<cfif structKeyExists(data.config, "ignorePaths") AND isArray(data.config.ignorePaths)>
+										<cfif arrayLen(data.config.ignorePaths) EQ 0>
+											<em>None</em>
+										<cfelse>
+											#encodeForHTML(arrayToList(data.config.ignorePaths, ", "))#
+										</cfif>
+									<cfelse>
+										-
+									</cfif>
+								</td>
+							</tr>
+							<tr>
+								<th align="right">Ignored Scanners:</th>
+								<td>
+									<cfif structKeyExists(data.config, "ignoreScanners") AND isArray(data.config.ignoreScanners)>
+										<cfif arrayLen(data.config.ignoreScanners) EQ 0>
+											<em>None</em>
+										<cfelse>
+											#encodeForHTML(arrayToList(data.config.ignoreScanners, ", "))#
+										</cfif>
+									<cfelse>
+										-
+									</cfif>
+								</td>
+							</tr>
 						</table>
 					</cfif>
-
-					<cfloop item="typeKey" collection="#resultsByType#"> 
-						<h2 class="type-key" id="#hash(typeKey, "SHA-256")#">#encodeForHTML(typeKey)#</h2>
-						<cfloop array="#resultsByType[typeKey]#" index="local.i">
-							<div class="issue">
-								<cfif arguments.listBy IS "type">
-									<h3>#encodeForHTML(local.i.path)#:#int(local.i.line)#</h3>
-								<cfelse>
-									<h3>#encodeForHTML(local.i.id)# on line #int(local.i.line)#</h3>
-								</cfif>
-								<div class="issue-badges">
-									 <span class="badge ind-#int(local.i.severity)#">Severity: #getIndicatorAsText(local.i.severity)#</span>
-									<span class="badge ind-#int(local.i.confidence)#">Confidence: #getIndicatorAsText(local.i.confidence)#</span>
-
-								</div>
-								<cfif local.i.keyExists("message") AND len(local.i.message)>
-									<div class="issue-message">
-										#encodeForHTML(local.i.message)#
-									</div>	
-								</cfif>
-								
-								<cfif len(local.i.context)>
-									<pre class="issue-context">#encodeForHTML(local.i.context)#</pre>
-								</cfif>
-							</div>
-						</cfloop>
-					</cfloop>
 				</cfoutput>
 			</body>
 		</cfsavecontent>	

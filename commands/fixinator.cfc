@@ -228,6 +228,10 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 			}
 		}
 		
+		if (len(arguments.resultFile)) {
+			arguments.resultFile = fileSystemUtil.resolvePath( arguments.resultFile );
+			fixinatorReport.generateReport(resultFile=arguments.resultFile, format=arguments.resultFormat, listBy=arguments.listBy, data=local.results);
+		}
 
 
 		if (arrayLen(local.results.results) == 0 && arrayLen(local.results.warnings) == 0)   {
@@ -237,15 +241,11 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 					print.line().greenLine("Tip: For additional results try decreasing the severity or confidence level to medium or low");
 					print.greenLine("    Currently: severity=#local.results.config.minSeverity# confidence=#local.results.config.minConfidence# ")	
 				}
-				
 			}
 		} else {
 			print.boldRedLine("FINDINGS: " & arrayLen(local.results.results));
 
-			if (len(arguments.resultFile)) {
-				arguments.resultFile = fileSystemUtil.resolvePath( arguments.resultFile );
-				fixinatorReport.generateReport(resultFile=arguments.resultFile, format=arguments.resultFormat, listBy=arguments.listBy, data=local.results);
-			}
+			
 
 			local.resultsByType = {};
 			for (local.i in local.results.results) {

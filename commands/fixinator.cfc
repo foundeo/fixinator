@@ -415,8 +415,8 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 
 		if (fixinatorClient.hasClientUpdate()) {
 			print.line();
-			print.boldGreenLine("Yay! There is a fixinator client update! Please run the following command to update your client:");
-			print.boldGreenLine("    box update fixinator");
+			print.boldGreenLine("Yay! There is a fixinator client update! Please run the following command to get the latest version:");
+			print.boldGreenLine("    box install fixinator");
 		}
 
 

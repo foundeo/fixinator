@@ -23,7 +23,7 @@ component singleton="true" {
 		
 	}
 
-	public function run(string path, struct config={}, any progressBar="", any job="") {
+	public function run(string path, struct config={}, any progressBar="") {
 		var files = "";
 		var payload = {"config"=getDefaultConfig(), "files"=[]};
 		var results = {"warnings":[], "results":[], "payloads":[]};
@@ -32,7 +32,6 @@ component singleton="true" {
 		var fileCounter = 0;
 		var percentValue = 0;
 		var hasProgressBar = isObject(arguments.progressBar);
-		var hasJob = isObject(arguments.job);
 		var baseDir = getDirectoryFromPath(arguments.path);
 		if (fileExists(baseDir & ".fixinator.json")) {
 			local.fileConfig = fileRead(getDirectoryFromPath(arguments.path) & ".fixinator.json");
@@ -55,67 +54,64 @@ component singleton="true" {
 			files = directoryList(arguments.path, true, "path");
 			files = filterPaths(arguments.path, files, payload.config);	
 		}
-		for (local.f in files) {
-			fileCounter++;
-			if (fileExists(local.f)) {
-				local.fileInfo = getFileInfo(local.f);
-				if (local.fileInfo.canRead && local.fileInfo.type == "file") {
-					local.ext = listLast(local.f, ".");
-					if (local.fileInfo.size > variables.maxPayloadSize && local.ext != "jar") {
-						results.warnings.append( { "message":"File was too large, #local.fileInfo.size# bytes, max: #variables.maxPayloadSize#", "path":local.f } );
-						continue;
-					} else {
-						
-						if (size + local.fileInfo.size > variables.maxPayloadSize || arrayLen(payload.files) > variables.maxPayloadFileCount) {
-							if (hasJob) {
-								job.start( ' Scanning Payload (#arrayLen(payload.files)# of #arrayLen(files)# files) this may take a sec...' );
-								if (hasProgressBar) {
-									progressBar.update( percent=percentValue, currentCount=fileCounter, totalCount=arrayLen(files) );	
-								}
-								local.msStart = getTickCount();
-							}
-							local.result = sendPayload(payload);
-							if (hasJob) {
-								job.addSuccessLog( ' Scan Payload Complete, took #getTickCount()-local.msStart#ms ' );
-								job.complete(dumpLog=false);
+		local.filesPerBatch = arrayLen(files);
+		local.numberOfBatches = 1;
 
-							}
-							arrayAppend(results.results, local.result.results, true);
-							payload.result = local.result;
-							//arrayAppend(results.payloads, payload);
-							size = 0;
-							payload = {"config"=arguments.config, "files"=[]};
-						} else {
-							size+= local.fileInfo.size;
-							payload.files.append({"path":replace(local.f, baseDir, ""), "data":(local.ext == "jar") ? "" : fileRead(local.f), "sha1":fileSha1(local.f)});
-						}
+		if (arrayLen(files) > (variables.maxPayloadFileCount * 20 )) {
+			local.numberOfBatches = 4;
+		} else if (arrayLen(files) > (variables.maxPayloadFileCount * 10)) {
+			local.numberOfBatches = 3;
+		} else if (arrayLen(files) > (variables.maxPayloadFileCount * 3)) {
+			local.numberOfBatches = 2;
+		}
+		local.filesPerBatch = (arrayLen(files) / local.numberOfBatches) + 1;
+		local.lock_name = createUUID();
+
+		if (!variables.keyExists("fixinator_shared")) {
+			variables.fixinator_shared = {};
+		}
+		variables.fixinator_shared[local.lock_name] = {fileCounter=0, pendingCounter=0, totalFileCount=arrayLen(files), lastPercentValue=0, error=0};
+		local.batches = [{batchType:"progressBar", hasProgressBar:hasProgressBar, progressBar:progressBar, lock_name=local.lock_name}];
+		
+		local.batch = {files:[], batchType:"files", lock_name:local.lock_name, baseDir:baseDir, config:payload.config};
+		
+		for (local.f in files) {
+			arrayAppend(local.batch.files, local.f);
+			if (arrayLen(local.batch.files) >= local.filesPerBatch) {
+				arrayAppend(local.batches, local.batch);
+				local.batch = {files:[], batchType:"files", lock_name:local.lock_name, baseDir:baseDir, config:payload.config};
+			}
+		}
+
+		if (arrayLen(local.batch.files)) {
+			arrayAppend(local.batches, local.batch);
+		}
+		
+		arrayEach(local.batches, processBatch, true, arrayLen(local.batches));
+		for (local.batch in local.batches) {
+			if (local.batch.keyExists("error")) {
+				if (local.batch.error.keyExists("message")) {
+					throw(message=local.batch.error.message, type="FixinatorClient");	
+				}
+				
+			}
+			if (local.batch.batchType == "files" && local.batch.keyExists("results")) {
+			 	if(local.batch.results.keyExists("results")) {
+					if (arrayLen(local.batch.results.results) > 0) {
+						arrayAppend(results.results, local.batch.results.results, true);
 					}
-				} else {
-					results.warnings.append( { "message":"Missing Read Permission", "path":local.f } );
 				}
-				percentValue = int( (fileCounter/arrayLen(files)) * 90);
-				if (percentValue >= 100) {
-					percentValue = 90;
-				}
-				if (hasProgressBar) {
-					progressBar.update( percent=percentValue, currentCount=fileCounter, totalCount=arrayLen(files) );	
+				if (local.batch.results.keyExists("warnings")) {
+					if (arrayLen(local.batch.results.warnings) > 0) {
+						arrayAppend(results.warnings, local.batch.results.warnings, true);
+					}
 				}
 			}
 		}
-		if (arrayLen(payload.files)) {
-			if (hasJob) {
-				job.start( ' Scanning Payload (#arrayLen(payload.files)# of #arrayLen(files)# files) this may take a sec...' );
-				local.msStart = getTickCount();
-			}
-			local.result = sendPayload(payload);
-			if (hasJob) {
-				job.addSuccessLog ( ' Scan Payload Complete, took #getTickCount()-local.msStart#ms ' );
-				job.complete(dumpLog=false);
-			}
-			payload.result = local.result;
-			//arrayAppend(results.payloads, payload);
-			arrayAppend(results.results, local.result.results, true);
-		}
+
+		
+
+		
 		structDelete(results, "payloads");
 		if (hasProgressBar) {
 			progressBar.update( percent=100, currentCount=arrayLen(files), totalCount=arrayLen(files) );	
@@ -128,9 +124,136 @@ component singleton="true" {
 		return variables.apiURL;
 	}
 
+	private function processBatch(element, index) {
+		
+		if (element.batchType == "progressBar") {
+			//progress bar worker
+			for (local.i=0;i<1000;i++) {
+				updateProgressBar(element);
+				cflock(name=element.lock_name, type="readonly", timeout="30") {
+					if (variables.fixinator_shared[element.lock_name].error != 0) {
+						//thread errored out
+						return;
+					}
+					if (variables.fixinator_shared[element.lock_name].fileCounter == variables.fixinator_shared[element.lock_name].totalFileCount) {
+						if (variables.fixinator_shared[element.lock_name].pendingCounter == 0) {
+							//done
+							return;
+						}
+					}
+				}
+				sleep(200);
+			}
+		} else {
+			try {
+
+
+				element.results = {"warnings":[], "results":[], "payloads":[]};
+				local.size = 0;
+				local.payload = {"config"=element.config, "files"=[]};
+
+				for (local.f in element.files) {
+					cflock(name=element.lock_name, type="exclusive", timeout="30") {
+						variables.fixinator_shared[element.lock_name].fileCounter++;	
+						if (variables.fixinator_shared[element.lock_name].error != 0) {
+							//another thread errored out so quit
+							return;
+						}
+					}
+					if (fileExists(local.f)) {
+						local.fileInfo = getFileInfo(local.f);
+						if (local.fileInfo.canRead && local.fileInfo.type == "file") {
+							local.ext = listLast(local.f, ".");
+							if (local.fileInfo.size > variables.maxPayloadSize && local.ext != "jar") {
+								element.results.warnings.append( { "message":"File was too large, #local.fileInfo.size# bytes, max: #variables.maxPayloadSize#", "path":local.f } );
+								continue;
+							} else {
+								
+								if (local.size + local.fileInfo.size > variables.maxPayloadSize || arrayLen(payload.files) > variables.maxPayloadFileCount) {
+									cflock(name=element.lock_name, type="exclusive", timeout="30") {
+										variables.fixinator_shared[element.lock_name].pendingCounter+=arrayLen(payload.files);	
+									}
+									local.result = sendPayload(payload);
+									cflock(name=element.lock_name, type="exclusive", timeout="30") {
+										variables.fixinator_shared[element.lock_name].pendingCounter-=arrayLen(payload.files);	
+									}
+									arrayAppend(element.results.results, local.result.results, true);
+									payload.result = local.result;
+									//arrayAppend(results.payloads, payload);
+									local.size = 0;
+									payload = {"config"=element.config, "files"=[]};
+								} else {
+									local.size+= local.fileInfo.size;
+									payload.files.append({"path":replace(local.f, element.baseDir, ""), "data":(local.ext == "jar") ? "" : fileRead(local.f), "sha1":fileSha1(local.f)});
+								}
+							}
+						} else {
+							element.results.warnings.append( { "message":"Missing Read Permission", "path":local.f } );
+						}
+						
+					}
+				}
+				if (arrayLen(payload.files)) {
+					cflock(name=element.lock_name, type="exclusive", timeout="30") {
+						variables.fixinator_shared[element.lock_name].pendingCounter+=arrayLen(payload.files);	
+					}
+					local.result = sendPayload(payload);
+					cflock(name=element.lock_name, type="exclusive", timeout="30") {
+						variables.fixinator_shared[element.lock_name].pendingCounter-=arrayLen(payload.files);	
+					}
+					payload.result = local.result;
+					//arrayAppend(results.payloads, payload);
+					arrayAppend(element.results.results, local.result.results, true);
+				}
+
+			} catch (any e) {
+				element.error = e;
+				cflock(name=element.lock_name, type="exclusive", timeout="30") {
+					variables.fixinator_shared[element.lock_name].error+=1;
+				}
+			}
+		}
+	}
+
+	private function updateProgressBar(element) {
+		if (arguments.element.hasProgressBar) {
+			local.lastPercentValue = 0;
+			local.fileCounter = 0;
+			local.pendingCounter = 0;
+			local.totalFileCount = 0;
+			cflock(name=element.lock_name, type="readonly", timeout="30") {
+				local.lastPercentValue = variables.fixinator_shared[element.lock_name].lastPercentValue;
+				local.fileCounter = variables.fixinator_shared[element.lock_name].fileCounter;
+				local.pendingCounter = variables.fixinator_shared[element.lock_name].pendingCounter;
+				local.totalFileCount = variables.fixinator_shared[element.lock_name].totalFileCount;
+			}
+			
+			local.progress = fileCounter;
+			local.progress -= (pendingCounter/2);
+			local.percentValue = int( (local.progress/totalFileCount) * 100);
+			local.upperBound = int( (fileCounter/totalFileCount) * 100 ) - 1;
+			if (pendingCounter > 0) {
+				if (local.percentValue <= local.upperBound && local.lastPercentValue <= local.upperBound) {
+					//increment counter while waiting for HTTP response
+					if (local.lastPercentValue >= local.percentValue) {
+						local.percentValue = local.lastPercentValue+1;
+					}
+				}
+			}
+			
+			if (local.lastPercentValue != local.percentValue) {
+				cflock(name=element.lock_name, type="exclusive", timeout="30") {
+					variables.fixinator_shared[element.lock_name].lastPercentValue = local.percentValue;
+				}
+			}
+			element.progressBar.update( percent=local.percentValue, currentCount=fileCounter, totalCount=totalFileCount);	
+
+		}
+	}
+
 	public function sendPayload(payload, isRetry=0) {
 		var httpResult = "";
-		cfhttp(url=getAPIURL(), method="POST", result="httpResult") {
+		cfhttp(url=getAPIURL(), method="POST", result="httpResult", timeout="35") {
 			cfhttpparam(type="header", name="Content-Type", value="application/json");
 			cfhttpparam(type="header", name="x-api-key", value=getAPIKey());
 			cfhttpparam(type="header", name="X-Client-Version", value=getClientVersion());
@@ -152,10 +275,10 @@ component singleton="true" {
 				sleep(500);
 				return sendPayload(payload=arguments.payload, isRetry=1);
 			}
-		} else if (httpResult.statusCode contains "502") { 
-			//BAD GATEWAY - lambda timeout issue
+		} else if (httpResult.statusCode contains "502" || httpResult.statusCode contains "504") { 
+			//502 BAD GATEWAY or 504 Gateway Timeout - lambda timeout issue
 			if (arguments.isRetry >= 2) {
-				throw(message="Fixinator API Returned 502 Status Code (Bad Gateway). Please try again shortly or contact Foundeo Inc. if the problem persists.", type="FixinatorClient");
+				throw(message="Fixinator API Returned #httpResult.statusCode# Status Code. Please try again shortly or contact Foundeo Inc. if the problem persists.", type="FixinatorClient");
 			} else {
 				//retry it
 				sleep(500);
@@ -278,13 +401,13 @@ component singleton="true" {
 			local.fixStartPos = local.filePositionOffset + fix.fix.replacePosition;
 			local.fileSnip = mid(local.fileContent, local.fixStartPos, len(fix.fix.replaceString));
 			if (local.fileSnip != fix.fix.replaceString) {
-				throw(message="Snip does not match: #local.fileSnip# expected: #fix.fix.replaceString# #serializeJSON(local)# FPO:#local.filePositionOffset# FSP:#local.fixStartPos#  #local.fileContent# ");
+				throw(message="Snip does not match: |#local.fileSnip#| expected: |#fix.fix.replaceString#| FPO:#local.filePositionOffset# FSP:#local.fixStartPos#  #local.fileContent# ");
 			} else {
 				local.prefix = mid(local.fileContent, 1, local.fixStartPos-1);
 				local.suffix = mid(local.fileContent, local.fixStartPos + len(local.fix.fix.replaceString), len(fileContent)- local.fixStartPos + len(local.fix.fix.replaceString));
 				local.fileContent = local.prefix & local.fix.fix.fixCode & local.suffix;
 
-				local.filePositionOffset = ( len(fix.fix.fixCode) - len(fix.fix.replaceString) );
+				local.filePositionOffset += ( len(fix.fix.fixCode) - len(fix.fix.replaceString) );
 
 				//throw(message="FPO:#local.filePositionOffset# FileContent:#local.fileContent#");
 

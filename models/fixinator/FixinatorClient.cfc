@@ -285,11 +285,11 @@ component singleton="true" {
 				return sendPayload(payload=arguments.payload, isRetry=arguments.isRetry+1);
 			}
 		}
-		if (!isJSON(httpResult.fileContent)) {
-			throw(message="API Result was not valid JSON", detail=httpResult.fileContent);
-		}
 		if (httpResult.statusCode does not contain "200") {
 			throw(message="API Returned non 200 Status Code (#httpResult.statusCode#)", detail=httpResult.fileContent, type="FixinatorClient");
+		}
+		if (!isJSON(httpResult.fileContent)) {
+			throw(message="API Result was not valid JSON (#httpResult.statusCode#)", detail=httpResult.fileContent);
 		}
 		if (structKeyExists(httpResult.responseHeader, "X-Client-Update")) {
 			variables.clientUpdate = true;

@@ -92,8 +92,9 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 			print.line();
 			print.line("Fixinator will send source code to: " & fixinatorClient.getAPIURL());
 			print.line("for scanning. The code is kept in RAM during scanning and is not persisted.");
+			print.line("For details see: https://github.com/foundeo/fixinator/wiki/How-Does-Fixinator-Work");
 			print.line();
-			print.line("Note: The enterprise version allows you to run the code scanner on your own servers.");
+			print.yellowBoldLine("Note: The enterprise version allows you to run the code scanner fully on your own servers.");
 			if (isRunningInCI()) {
 				print.line("Detected CI Environment, I will continue without prompting");
 			} else {
@@ -235,11 +236,13 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 
 
 		if (arrayLen(local.results.results) == 0 && arrayLen(local.results.warnings) == 0)   {
-			print.boldGreenLine("0 Issues Found");
+			print.line().boldGreenLine("✓ 0 Issues Found");
 			if (arguments.verbose) {
 				if (local.results.config.minSeverity != "low" || local.results.config.minConfidence != "low") {
-					print.line().greenLine("Tip: For additional results try decreasing the severity or confidence level to medium or low");
-					print.greenLine("    Currently: severity=#local.results.config.minSeverity# confidence=#local.results.config.minConfidence# ")	
+					print.line().line("Tip: For additional results try decreasing the severity or confidence level to medium or low");
+					print.line("For example: box fixinator confidence=low path=/some/file.cfm");
+					print.line("    Currently: severity=#local.results.config.minSeverity# confidence=#local.results.config.minConfidence# ");
+
 				}
 			}
 		} else {
@@ -402,7 +405,7 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 
 			if (arrayLen(toFix) > 0) {
 				print.line();
-				local.msg = "FIXING #arrayLen(toFix)# issue" & ((arrayLen(toFix)>0) ? "s" :"");
+				local.msg = "FIXING #arrayLen(toFix)# issue" & ((arrayLen(toFix) != 1) ? "s" :"");
 				print.boldOrangeLine(local.msg);
 				local.fixResults = fixinatorClient.fixCode(basePath=arguments.path, fixes=toFix);
 

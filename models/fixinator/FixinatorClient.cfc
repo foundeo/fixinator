@@ -91,7 +91,11 @@ component singleton="true" {
 		for (local.batch in local.batches) {
 			if (local.batch.keyExists("error")) {
 				if (local.batch.error.keyExists("message")) {
-					throw(message=local.batch.error.message, type="FixinatorClient");	
+					local.detail = "";
+					if (local.batch.error.keyExists("detail")) {
+						local.detail = local.batch.error.detail;
+					}
+					throw(message=local.batch.error.message, type="FixinatorClient", detail=local.detail);	
 				}
 				
 			}
@@ -284,6 +288,8 @@ component singleton="true" {
 				sleep(500);
 				return sendPayload(payload=arguments.payload, isRetry=arguments.isRetry+1);
 			}
+		} else if (httpResult.statusCode contains "Connection Failure") {
+			throw(message="Connection Failure", detail="Unable to connect to #getAPIURL()# please check your firewall settings and internet connection.");
 		}
 		if (httpResult.statusCode does not contain "200") {
 			throw(message="API Returned non 200 Status Code (#httpResult.statusCode#)", detail=httpResult.fileContent, type="FixinatorClient");

@@ -1,5 +1,8 @@
 # fixinator-client
 
+[![Build Status](https://foundeo.com/images/fixinator-demo.gif)](https://fixinator.app)
+
+
 ## Command Line Arguments
 
 When running the `fixinator` command via the command line you can set the following arguments:

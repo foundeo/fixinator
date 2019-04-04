@@ -475,6 +475,7 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 	}
 
 	private boolean function isTFS() {
+		var env = server.system.environment;
 		return env.keyExists("TF_BUILD") && isBoolean(env.TF_BUILD) && env.TF_BUILD;
 	}
 

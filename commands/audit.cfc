@@ -21,8 +21,9 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 	* @confidence.hint The minimum confidence level none, low, medium or high
 	* @ignoreScanners.hint A comma seperated list of scanner ids to ignore
 	* @autofix.hint Use either off, prompt or automatic
+	* @failOnIssues.hint Determines if an exit code is set to 1 when issues are found.
 	**/
-	function run(path="./box.json", string resultFile, string resultFormat="json", boolean verbose=true, string listBy="type", string severity="default", string confidence="default", string ignoreScanners="", autofix="off")  {
+	function run(path="./box.json", string resultFile, string resultFormat="json", boolean verbose=true, string listBy="type", string severity="default", string confidence="default", string ignoreScanners="", autofix="off", boolean failOnIssues=true)  {
 		
 
 		arguments.path = fileSystemUtil.resolvePath(arguments.path);
@@ -33,6 +34,7 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 			print.line("Auditing box.json dependencies...");
 		} else { 
 			print.redLine("You must run audit against a box.json file or from a directory that contains one");
+			
 			setExitCode(1);
 			return;
 		}

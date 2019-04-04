@@ -87,3 +87,7 @@ Default: `low` - The minimum severity level that will be flagged. Set this to `h
 
 Default: `high` - The minimum confidence level that will be flagged. Issues with `low` confidence will be more likely to be false positives.
 
+### failOnIssues
+
+Default: `true` - When true returns an exit code of `1` when issues are found, this will cause your build to fail if you are running in CI. If you do not want the build to fail when issues are found, set this to `false`.
+

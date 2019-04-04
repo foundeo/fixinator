@@ -28,8 +28,9 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 	* @confidence.optionsUDF confidenceComplete
 	* @ignoreScanners.hint A comma seperated list of scanner ids to ignore
 	* @autofix.hint Use either off, prompt or automatic
+	* @failOnIssues.hint Determines if an exit code is set to 1 when issues are found.
 	**/
-	function run( string path=".", string resultFile, string resultFormat="json", boolean verbose=true, string listBy="type", string severity="default", string confidence="default", string ignoreScanners="", autofix="off")  {
+	function run( string path=".", string resultFile, string resultFormat="json", boolean verbose=true, string listBy="type", string severity="default", string confidence="default", string ignoreScanners="", autofix="off", boolean failOnIssues=true)  {
 		var fileInfo = "";
 		var severityLevel = 1;
 		var confLevel = 1;
@@ -421,8 +422,10 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 			}
 
 
-
-			setExitCode( 1 );
+			if (arguments.failOnIssues) {
+				setExitCode( 1 );	
+			}
+			
 		}
 
 		if (fixinatorClient.hasClientUpdate()) {

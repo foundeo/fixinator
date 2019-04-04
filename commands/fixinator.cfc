@@ -78,6 +78,7 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 				}
 
 				setExitCode(1);
+				return;
 			} else {
 
 			}

@@ -19,10 +19,13 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 	* @path.hint A file or directory to scan
 	* @resultFile.hint A file path to write the results to - see resultFormat
 	* @resultFormat.hint The format to write the results in [json,html,pdf,junit]
+	* @resultFormat.optionsUDF resultFormatComplete
 	* @verbose.hint When false limits the output
 	* @listBy.hint Show results by type or file
 	* @severity.hint The minimum severity warn, low, medium or high
+	* @severity.optionsUDF severityComplete
 	* @confidence.hint The minimum confidence level none, low, medium or high
+	* @confidence.optionsUDF confidenceComplete
 	* @ignoreScanners.hint A comma seperated list of scanner ids to ignore
 	* @autofix.hint Use either off, prompt or automatic
 	**/
@@ -65,6 +68,12 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 
 				if (isBitbucketPipeline()) {
 					print.line("Documentation: https://github.com/foundeo/fixinator/wiki/Running-Fixinator-on-Bitbucket");	
+				}
+				if (isTFS()) {
+					print.line("Documentation: https://github.com/foundeo/fixinator/wiki/Running-Fixinator-or-Azure-DevOps-Pipelines-or-TFS");		
+				}
+				if (isCircleCI()) {
+					print.line("Documentation: https://github.com/foundeo/fixinator/wiki/Running-Fixinator-on-CircleCI");	
 				}
 
 				setExitCode(1);
@@ -351,7 +360,7 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 							for (local.fix in local.i.fixes) {
 								local.fixIndex++;
 								local.fixOptions = listAppend(local.fixOptions, local.fixIndex);
-								print.greyLine("        "&local.fixIndex&") "&local.fix.title & ": " & local.fix.fixCode);
+								print.greyLine("        "&local.fixIndex&") "&local.fix.title & ": " & trim(local.fix.fixCode) );
 							}
 							if (arguments.autofix == "prompt") {
 								print.toConsole();
@@ -426,6 +435,18 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 
 	}
 
+	function resultFormatComplete() {
+		return [ 'html', 'json', 'pdf', 'junit' ];
+	}
+
+	function confidenceComplete() {
+		return [ 'low', 'medium', 'high', 'none' ];
+	}
+
+	function severityComplete() {
+		return [ 'low', 'medium', 'high', 'warn' ];
+	}
+
 
 	private boolean function isRunningInCI() {
 		var env = server.system.environment;
@@ -435,7 +456,9 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 		if (env.keyExists("CONTINUOUS_INTEGRATION") && isBoolean(env.CONTINUOUS_INTEGRATION) && env.CONTINUOUS_INTEGRATION) {
 			return true;
 		}
-
+		if (env.keyExists("TF_BUILD") && isBoolean(env.TF_BUILD) && env.TF_BUILD) {
+			return true;
+		}
 		return false;
 	}
 
@@ -449,6 +472,10 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 
 	private boolean function isBitbucketPipeline() {
 		return server.system.environment.keyExists("BITBUCKET_BUILD_NUMBER");
+	}
+
+	private boolean function isTFS() {
+		return env.keyExists("TF_BUILD") && isBoolean(env.TF_BUILD) && env.TF_BUILD;
 	}
 
 }

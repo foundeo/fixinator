@@ -1,4 +1,11 @@
 <cfcomponent>
+	
+	<cfif server.keyExists("lucee") AND NOT getTagList().cf.keyExists( 'document' )>
+		<cfset variables.hasCFDocument = false>
+	<cfelse>
+		<cfset variables.hasCFDocument = true>
+		<cfinclude template="../../mixins/generate-pdf.cfm">
+	</cfif>
 
 	<cffunction name="generateReport" output="false" access="public">
 		<cfargument name="format" default="html">
@@ -10,7 +17,11 @@
 		<cfelseif format IS "html">
 			<cfset fileWrite(arguments.resultFile, generateHTMLReport(data=arguments.data, listBy=arguments.listBy))>
 		<cfelseif format IS "pdf">
-			<cfdocument format="PDF" filename="#arguments.resultFile#" overwrite="true"><cfoutput>#generateHTMLReport(data=arguments.data, listBy=arguments.listBy)#</cfoutput></cfdocument>
+			<cfif variables.hasCFDocument>
+				<cfset generatePDF(resultFile=arguments.resultFile, html=generateHTMLReport(data=arguments.data, listBy=arguments.listBy))>
+			<cfelse>
+				<cfthrow message="The cfdocument extension failed to load, so I'm unable to generate a PDF">
+			</cfif>
 		<cfelseif format IS "junit">
 			<cfset fileWrite(arguments.resultFile, generateJUnitReport(data=arguments.data))>
 		<cfelse>

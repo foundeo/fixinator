@@ -365,18 +365,29 @@ component singleton="true" {
 	public function fixCode(basePath, fixes) {
 		var fix = "";
 		var basePathInfo = getFileInfo(arguments.basePath);
-		//sort issues by file then line number
+		//sort issues by file first then by position
+		arraySort(
+  		  arguments.fixes,
+    		function (e1, e2){
+    			return compareNoCase(e1.issue.path, e2.issue.path);
+    		}
+		);
 		arraySort(
   		  arguments.fixes,
     		function (e1, e2){
     			if (e1.issue.path == e2.issue.path) {
-    				return e1.issue.line < e2.issue.line;
+                    if (e1.fix.replacePosition < e2.fix.replacePosition) {
+                        return -1;
+                    } else if (e1.fix.replacePosition > e2.fix.replacePosition) {
+                        return 1;
+                    } 
+    				return 0;
     			} else {
-    				return compare(e1.issue.path, e2.issue.path);	
+    				return compareNoCase(e1.issue.path, e2.issue.path);	
     			}
-        		
     		}
 		);
+
 		local.lastFile = "";
 		local.filePositionOffset = 0;
 		for (fix in arguments.fixes) {

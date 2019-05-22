@@ -1,8 +1,8 @@
 {
     "name":"fixinator",
-    "version":"1.0.21",
+    "version":"1.0.22",
     "author":"Foundeo Inc.",
-    "location":"foundeo/fixinator#v1.0.21",
+    "location":"foundeo/fixinator#v1.0.22",
     "homepage":"https://fixinator.app/",
     "documentation":"https://github.com/foundeo/fixinator",
     "repository":{

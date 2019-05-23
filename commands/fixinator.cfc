@@ -30,7 +30,7 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 	* @autofix.hint Use either off, prompt or automatic
 	* @failOnIssues.hint Determines if an exit code is set to 1 when issues are found.
 	**/
-	function run( string path=".", string resultFile, string resultFormat="json", boolean verbose=true, string listBy="type", string severity="default", string confidence="default", string ignoreScanners="", autofix="off", boolean failOnIssues=true)  {
+	function run( string path=".", string resultFile, string resultFormat="json", boolean verbose=true, string listBy="type", string severity="default", string confidence="default", string ignoreScanners="", autofix="off", boolean failOnIssues=true, boolean debug=false)  {
 		var fileInfo = "";
 		var severityLevel = 1;
 		var confLevel = 1;
@@ -120,6 +120,19 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 				}
 			}
 			
+		}
+
+		if (configService.getSetting("modules.fixinator.api_url", "UNDEFINED") != "UNDEFINED") {
+			fixinatorClient.setAPIURL(configService.getSetting("modules.fixinator.api_url", "UNDEFINED"));
+		}
+
+		if (arguments.verbose) {
+			print.greenLine("Fixinator API Server: #fixinatorClient.getAPIURL()#");
+		}
+
+		if (arguments.debug) {
+			fixinatorClient.setDebugMode(true);
+			print.greenLine("✓ DEBUG MODE ENABLED: #fixinatorClient.isDebugModeEnabled()#");
 		}
 
 
@@ -422,6 +435,16 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 
 			}
 
+
+			if (arguments.debug) {
+				local.debugLogFile = expandPath("{lucee-web}/logs/fixinator-client-debug.log");
+				print.line();
+				if (fileExists(local.debugLogFile)) {
+					print.boldGreenLine("Debug information logged to: #local.debugLogFile#");
+				} else {
+					print.boldRedLine("Expected debug information to be logged to: #local.debugLogFile# but the file does not exist.");
+				}
+			}
 
 			if (arguments.failOnIssues) {
 				setExitCode( 1 );	

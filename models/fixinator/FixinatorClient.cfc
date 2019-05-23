@@ -9,6 +9,7 @@ component singleton="true" {
 	}
 
 	variables.clientUpdate = false;
+	variables.debugMode = false;
 	
 	public function getClientVersion() {
 		if (!structKeyExists(variables, "clientVersion")) {
@@ -42,6 +43,8 @@ component singleton="true" {
 				throw(message="Invalid .fixinator.json config file, was not valid JSON");
 			}
 		}
+
+		
 
 		structAppend(payload.config, arguments.config, true);
 		arguments.config = payload.config;
@@ -128,6 +131,10 @@ component singleton="true" {
 		return variables.apiURL;
 	}
 
+	public function setAPIURL(string apiURL) {
+		variables.apiURL = arguments.apiURL;
+	}
+
 	private function processBatch(element, index) {
 		
 		if (element.batchType == "progressBar") {
@@ -146,7 +153,7 @@ component singleton="true" {
 						}
 					}
 				}
-				sleep(200);
+				sleep(350);
 			}
 		} else {
 			try {
@@ -186,10 +193,9 @@ component singleton="true" {
 									//arrayAppend(results.payloads, payload);
 									local.size = 0;
 									payload = {"config"=element.config, "files"=[]};
-								} else {
-									local.size+= local.fileInfo.size;
-									payload.files.append({"path":replace(local.f, element.baseDir, ""), "data":(local.ext == "jar") ? "" : fileRead(local.f), "sha1":fileSha1(local.f)});
-								}
+								} 
+								local.size+= local.fileInfo.size;
+								payload.files.append({"path":replace(local.f, element.baseDir, ""), "data":(local.ext == "jar") ? "" : fileRead(local.f), "sha1":fileSha1(local.f)});
 							}
 						} else {
 							element.results.warnings.append( { "message":"Missing Read Permission", "path":local.f } );
@@ -235,7 +241,7 @@ component singleton="true" {
 			local.progress = fileCounter;
 			local.progress -= (pendingCounter/2);
 			local.percentValue = int( (local.progress/totalFileCount) * 100);
-			local.upperBound = int( (fileCounter/totalFileCount) * 100 ) - 1;
+			local.upperBound = int( (fileCounter/totalFileCount) * 100 ) - 2;
 			if (pendingCounter > 0) {
 				if (local.percentValue <= local.upperBound && local.lastPercentValue <= local.upperBound) {
 					//increment counter while waiting for HTTP response
@@ -255,13 +261,34 @@ component singleton="true" {
 		}
 	}
 
+	public function setDebugMode(boolean debugMode) {
+		variables.debugMode = arguments.debugMode;
+	}
+
+	public function isDebugModeEnabled() {
+		return variables.debugMode;
+	}
+
 	public function sendPayload(payload, isRetry=0) {
 		var httpResult = "";
+		if (isDebugModeEnabled()) {
+			local.payloadID = createUUID();
+			local.payloadPaths = arrayMap(arguments.payload.files, function(item) {
+				return item.path;
+			});
+			debugger("Sending Payload #local.payloadID# to #getAPIURL()# of #arrayLen(arguments.payload.files)# files. isRetry:#arguments.isRetry#");
+			debugger("Payload Paths #local.payloadID#: #serializeJSON(local.payloadPaths)#");
+			local.tick = getTickCount();
+		} 
 		cfhttp(url=getAPIURL(), method="POST", result="httpResult", timeout="35") {
 			cfhttpparam(type="header", name="Content-Type", value="application/json");
 			cfhttpparam(type="header", name="x-api-key", value=getAPIKey());
 			cfhttpparam(type="header", name="X-Client-Version", value=getClientVersion());
 			cfhttpparam(value="#serializeJSON(payload)#", type="body");
+		}
+		if (isDebugModeEnabled()) {
+			local.tock=getTickCount();
+			debugger("Payload Response #local.payloadID# took #local.tock-local.tick# status #httpResult.statusCode#");
 		}
 		if (httpResult.statusCode contains "403") {
 			//FORBIDDEN -- API KEY ISSUE
@@ -286,6 +313,9 @@ component singleton="true" {
 			} else {
 				//retry it
 				sleep(500);
+				if (isDebugModeEnabled()) {
+					debugger("Attempting Retry of Payload #local.payloadID#");
+				}
 				return sendPayload(payload=arguments.payload, isRetry=arguments.isRetry+1);
 			}
 		} else if (httpResult.statusCode contains "Connection Failure") {
@@ -325,7 +355,7 @@ component singleton="true" {
 	public function filterPaths(baseDirectory, paths, config) {
 		var f = "";
 		var ignoredPaths = ["/.git/","\.git\","/.svn/","\.svn\", ".git/"];
-		var ignoredExtensions = ["jpg","png","txt","pdf","doc","docx","gif","css","zip","bak","exe","pack","log","csv","xsl","xslx","psd","ai"];
+		var ignoredExtensions = ["jpg","png","txt","pdf","doc","docx","gif","css","zip","bak","exe","pack","log","csv","xsl","xslx","psd","ai", "svg", "ttf", "woff", "ttf", "gz", "tar", "7z", "epub", "mobi", "ppt", "pptx"];
 		var filteredPaths = [];
 		//always ignore git paths
 		if (arguments.config.keyExists("ignorePaths") && arrayLen(arguments.config.ignorePaths)) {
@@ -444,6 +474,10 @@ component singleton="true" {
 		}
 	}
 
+	public function getFixinatorCategories() {
+
+	}
+
 	public function hasClientUpdate() {
 		return variables.clientUpdate;
 	}
@@ -464,6 +498,9 @@ component singleton="true" {
 		return createObject("java", "org.apache.commons.codec.digest.DigestUtils").sha1Hex(fIn);
 	}
 
+	public function debugger(string message) {
+		writeLog(text=arguments.message, type="information", file="fixinator-client-debug");
+	}
 
 
 

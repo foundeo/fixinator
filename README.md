@@ -60,7 +60,7 @@ A `.fixinator.json` configuration file can be placed in the root of a folder to 
 	{
 		"ignorePaths":["some/folder-to-ignore", "some/file-to-ignore.cfm"],
 		"ignoreExtensions":["ign","ore"],
-		"ignoreScanners":[],
+		"ignoreScanners":["xss"],
 		"minSeverity": "low",
 		"minConfidence": "low"
 	}
@@ -77,7 +77,7 @@ An array of file extensions to ignore. Certain file extensions such as image fil
 
 ### ignoreScanners 
 
-An array of scanner name slugs to ignore.
+An array of scanner name slugs to ignore. For example `["sqlinjection","xss","pathtraversal"]` would ignore or omit the results of the _SQL Injection Scanner_ the _Cross Site Scripting (XSS) Scanner_ and the _Path Traversal_ scanner.
 
 ### minSeverity
 

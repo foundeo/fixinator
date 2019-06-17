@@ -316,7 +316,30 @@ component singleton="true" {
 				if (isDebugModeEnabled()) {
 					debugger("Attempting Retry of Payload #local.payloadID#");
 				}
-				return sendPayload(payload=arguments.payload, isRetry=arguments.isRetry+1);
+				//split payload in to two
+				if (arrayLen(arguments.payload.files) > 2) {
+					local.payloadA = {"config"=arguments.payload.config, files=[]};
+					local.payloadB = {"config"=arguments.payload.config, files=[]};
+					local.div = int( arrayLen(arguments.payload.files) / 2 );
+
+					for (local.p = 1;local.p<=arrayLen(arguments.payload.files);local.p++) {
+						if (local.p < local.div) {
+							arrayAppend(local.payloadA.files, arguments.payload.files[local.p]);
+						} else {
+							arrayAppend(local.payloadB.files, arguments.payload.files[local.p]);
+						}
+					}
+					local.resultA = sendPayload(payload=local.payloadA, isRetry=arguments.isRetry+1);
+					local.resultB = sendPayload(payload=local.payloadB, isRetry=arguments.isRetry+1);
+					arrayAppend(local.resultA.results, local.resultB.results, true);
+					return local.resultA;
+				} else {
+					//already small just retry it
+					return sendPayload(payload=arguments.payload, isRetry=arguments.isRetry+1);
+				}
+				
+
+				
 			}
 		} else if (httpResult.statusCode contains "Connection Failure") {
 			throw(message="Connection Failure", detail="Unable to connect to #getAPIURL()# please check your firewall settings and internet connection.");

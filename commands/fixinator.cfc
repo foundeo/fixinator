@@ -71,11 +71,18 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 					print.line("Documentation: https://github.com/foundeo/fixinator/wiki/Running-Fixinator-on-Bitbucket");	
 				}
 				if (isTFS()) {
-					print.line("Documentation: https://github.com/foundeo/fixinator/wiki/Running-Fixinator-or-Azure-DevOps-Pipelines-or-TFS");		
+					print.line("Documentation: https://github.com/foundeo/fixinator/wiki/Running-Fixinator-on-Azure-DevOps-Pipelines-or-TFS");		
 				}
 				if (isCircleCI()) {
 					print.line("Documentation: https://github.com/foundeo/fixinator/wiki/Running-Fixinator-on-CircleCI");	
 				}
+				if (isCodeBuild()) {
+					print.line("Documentation: https://github.com/foundeo/fixinator/wiki/Running-Fixinator-on-AWS-CodeBuild");	
+				}
+				if (isJenkins()) {
+					print.line("Documentation: https://github.com/foundeo/fixinator/wiki/Running-Fixinator-on-Jenkins");
+				}
+
 
 				setExitCode(1);
 				return;
@@ -483,9 +490,10 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 		if (env.keyExists("CONTINUOUS_INTEGRATION") && isBoolean(env.CONTINUOUS_INTEGRATION) && env.CONTINUOUS_INTEGRATION) {
 			return true;
 		}
-		if (env.keyExists("TF_BUILD") && isBoolean(env.TF_BUILD) && env.TF_BUILD) {
+		if ( isTFS() || isCodeBuild() || isJenkins() || isTravisCI() || isCircleCI() || isBitbucketPipeline() ) {
 			return true;
 		}
+		
 		return false;
 	}
 
@@ -504,6 +512,16 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 	private boolean function isTFS() {
 		var env = server.system.environment;
 		return env.keyExists("TF_BUILD") && isBoolean(env.TF_BUILD) && env.TF_BUILD;
+	}
+
+	private boolean function isCodeBuild() {
+		var env = server.system.environment;
+		return (env.keyExists("CODEBUILD_BUILD_ID") && len(env.CODEBUILD_BUILD_ID));
+	}
+
+	private boolean function isJenkins() {
+		var env = server.system.environment;
+		return env.keyExists("BUILD_NUMBER") && len(env.BUILD_NUMBER) && env.keyExists("JENKINS_HOME") && len(env.JENKINS_HOME);
 	}
 
 }

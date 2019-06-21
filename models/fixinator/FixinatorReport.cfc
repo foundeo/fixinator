@@ -254,6 +254,7 @@
 		<cfset var sast = {"version"="2.0", "vulnerabilities"=[]}>
 		<cfset var i = "">
 		<cfset var v = "">
+		<!--- docs: https://gitlab.com/help/user/application_security/sast/index#reports-json-format --->
 		<cfloop array="#arguments.data.results#" index="i">
 			<cfset v = {"category"="sast", "name"="", "message"="", "description"="", "severity"="", "confidence"="", "scanner"={"id"="", "name"=""}, "location"={}, "identifiers"=[]}>
 			<cfif i.keyExists("title")>
@@ -267,20 +268,20 @@
 			</cfif>
 			<cfif i.keyExists("severity")>
 				<cfif i.severity EQ 3>
-					<cfset v.severity = "high">
+					<cfset v.severity = "High">
 				<cfelseif i.severity EQ 2>
-					<cfset v.severity = "medium">
+					<cfset v.severity = "Medium">
 				<cfelse>
-					<cfset v.severity = "low">
+					<cfset v.severity = "Low">
 				</cfif>
 			</cfif>
 			<cfif i.keyExists("confidence")>
 				<cfif i.confidence EQ 3>
-					<cfset v.confidence = "high">
+					<cfset v.confidence = "High">
 				<cfelseif i.confidence EQ 2>
-					<cfset v.confidence = "medium">
+					<cfset v.confidence = "Medium">
 				<cfelse>
-					<cfset v.confidence = "low">
+					<cfset v.confidence = "Low">
 				</cfif>
 			</cfif>
 			<cfif i.keyExists("id")>
@@ -308,7 +309,19 @@
 			<cfif i.keyExists("line")>
 				<cfset v.location["start_line"] = i.line>
 			</cfif>
+			<cfset local.cveRaw = "#v.file#:#v.start_line#">
+			<cfif i.keyExists("column")>
+				<cfset local.cveRaw &= ":#i.column#">
+			</cfif>
+			<cfif i.keyExists("context")>
+				<cfset local.cveRaw &= ":#i.context#">
+			</cfif>
+			<cfset v["cve"] = hash(local.cveRaw, "SHA-256") & ":" & v.scanner.id>
 			<cfset v.location["dependency"] = {}>
+			<cfset arrayAppend(v.identifiers, {"type"="fixinator_test_id", "name"="Fixinator Test ID", "value"=i.id, "url"="https://fixinator.app/"})>
+			<cfif i.keyExists("link") AND len(i.link)>
+				<cfset arrayAppend(v.identifiers, {"type"="fixinator_link", "name"="More Info Link", "value"=i.link, "url"=i.link})>
+			</cfif>
 			<cfset arrayAppend(sast.vulnerabilities, v)>
 		</cfloop>
 		<cfreturn serializeJSON(sast)>

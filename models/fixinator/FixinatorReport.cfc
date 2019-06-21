@@ -321,9 +321,13 @@
 			</cfif>
 			<cfset v["cve"] = hash(local.cveRaw, "SHA-256") & ":" & v.scanner.id>
 			<cfset v.location["dependency"] = {}>
-			<cfset arrayAppend(v.identifiers, {"type"="fixinator_test_id", "name"="Fixinator Test ID", "value"=i.id, "url"="https://fixinator.app/"})>
+			<cfset arrayAppend(v.identifiers, {"type"="fixinator_scanner_id", "name"="Fixinator Scanner ID: #i.id#", "value"=i.id, "url"="https://fixinator.app/"})>
 			<cfif i.keyExists("link") AND len(i.link)>
 				<cfset arrayAppend(v.identifiers, {"type"="fixinator_link", "name"="More Info Link", "value"=i.link, "url"=i.link})>
+			</cfif>
+			<cfif i.keyExists("fixes") AND arrayLen(i.fixes)>
+				<cfset local.fix = i.fixes[1]>
+				<cfset v["solution"] = "Replace: " & local.fix.replaceString & " with: " & local.fix.fixCode>
 			</cfif>
 			<cfset arrayAppend(sast.vulnerabilities, v)>
 		</cfloop>

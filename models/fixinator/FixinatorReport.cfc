@@ -24,6 +24,8 @@
 			</cfif>
 		<cfelseif format IS "junit">
 			<cfset fileWrite(arguments.resultFile, generateJUnitReport(data=arguments.data))>
+		<cfelseif format IS "sast">
+			<cfset fileWrite(arguments.resultFile, generateSASTReport(data=arguments.data))>
 		<cfelse>
 			<cfthrow message="Unsupported result file format">
 		</cfif>
@@ -245,7 +247,72 @@
 			</cfoutput>
 		</cfsavecontent>
 		<cfreturn xml>
-	</cffunction>	
+	</cffunction>
+
+	<cffunction name="generateSASTReport" returntype="string" output="false">
+		<cfargument name="data">
+		<cfset var sast = {"version"="2.0", "vulnerabilities"=[]}>
+		<cfset var i = "">
+		<cfset var v = "">
+		<cfloop array="#arguments.data.results#" index="i">
+			<cfset v = {"category"="sast", "name"="", "message"="", "description"="", "severity"="", "confidence"="", "scanner"={"id"="", "name"=""}, "location"={}, "identifiers"=[]}>
+			<cfif i.keyExists("title")>
+				<cfset v.name = i.title>
+			</cfif>
+			<cfif i.keyExists("message")>
+				<cfset v.message = i.message>
+			</cfif>
+			<cfif i.keyExists("description")>
+				<cfset v.description = i.description>
+			</cfif>
+			<cfif i.keyExists("severity")>
+				<cfif i.severity EQ 3>
+					<cfset v.severity = "high">
+				<cfelseif i.severity EQ 2>
+					<cfset v.severity = "medium">
+				<cfelse>
+					<cfset v.severity = "low">
+				</cfif>
+			</cfif>
+			<cfif i.keyExists("confidence")>
+				<cfif i.confidence EQ 3>
+					<cfset v.confidence = "high">
+				<cfelseif i.confidence EQ 2>
+					<cfset v.confidence = "medium">
+				<cfelse>
+					<cfset v.confidence = "low">
+				</cfif>
+			</cfif>
+			<cfif i.keyExists("id")>
+				<cfset v.scanner.id = "fixinator-" & i.id>
+			</cfif>
+			<cfif i.keyExists("category")>
+				<cfset v.scanner.name = i.category & " (#v.scanner.id#)">
+			</cfif>
+			<cfif i.keyExists("path")>
+				<cfset local.p = i.path>
+				<cfif left(local.p, 1) IS "/">
+					<cfset local.p = replace(local.p, "/", "", "ONE")>
+				</cfif>
+				<cfset v.location["file"] = local.p>
+				<cfif right(local.p, 3) IS "cfc">
+					<cfset local.className = left(local.p, len(local.p) - 4)>
+					<cfset replace(local.p, "/", ".", "ALL")>
+					<cfset replace(local.p, "\", ".", "ALL")>
+					<cfset v.location["class"] = local.className>
+				</cfif>
+			</cfif>
+			<cfif i.keyExists("function") AND len(i.function)>
+				<cfset v.location["method"] = i.function>
+			</cfif>
+			<cfif i.keyExists("line")>
+				<cfset v.location["start_line"] = i.line>
+			</cfif>
+			<cfset v.location["dependency"] = {}>
+			<cfset arrayAppend(sast.vulnerabilities, v)>
+		</cfloop>
+		<cfreturn serializeJSON(sast)>
+	</cffunction>
 
 	<cffunction name="getIndicatorAsText" access="private">
 		<cfargument name="indicator" type="numeric">

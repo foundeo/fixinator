@@ -39,7 +39,7 @@ Writes results to a file specified by the path in resultFile.
 
 ### resultFormat
 
-Specify either json (default), html or pdf.
+Specify either `json` (default), `html`, `pdf`, `junit`, or `sast`.
 
 ## Environment Variables
 

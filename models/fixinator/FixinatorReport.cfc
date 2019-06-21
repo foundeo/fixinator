@@ -256,7 +256,7 @@
 		<cfset var v = "">
 		<!--- docs: https://gitlab.com/help/user/application_security/sast/index#reports-json-format --->
 		<cfloop array="#arguments.data.results#" index="i">
-			<cfset v = {"category"="sast", "name"="", "message"="", "description"="", "severity"="", "confidence"="", "scanner"={"id"="", "name"=""}, "location"={}, "identifiers"=[]}>
+			<cfset v = {"category"="sast", "name"="", "message"="", "description"="", "severity"="Unknown", "confidence"="Unknown", "scanner"={"id"="", "name"=""}, "location"={}, "identifiers"=[]}>
 			<cfif i.keyExists("title")>
 				<cfset v.name = i.title>
 			</cfif>
@@ -308,8 +308,11 @@
 			</cfif>
 			<cfif i.keyExists("line")>
 				<cfset v.location["start_line"] = i.line>
+				<cfset v.location["end_line"] = i.line>
+			<cfelse>
+				<cfset v.location["end_line"] = 0>
 			</cfif>
-			<cfset local.cveRaw = "#v.file#:#v.start_line#">
+			<cfset local.cveRaw = "#v.location.file#:#v.location.start_line#">
 			<cfif i.keyExists("column")>
 				<cfset local.cveRaw &= ":#i.column#">
 			</cfif>

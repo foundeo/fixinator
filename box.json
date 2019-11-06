@@ -4,7 +4,7 @@
     "author":"Foundeo Inc.",
     "location":"foundeo/fixinator#v1.0.31",
     "homepage":"https://fixinator.app/",
-    "documentation":"https://github.com/foundeo/fixinator",
+    "documentation":"https://github.com/foundeo/fixinator/wiki",
     "repository":{
         "type":"git",
         "URL":"https://github.com/foundeo/fixinator"
@@ -13,7 +13,7 @@
     "slug":"fixinator",
     "shortDescription":"A CommandBox comand for scanning CFML code.",
     "type":"commandbox-modules",
-    "keywords":[],
+    "keywords":["security","audit","scan","scanner"],
     "private":false,
     "license":[
         {

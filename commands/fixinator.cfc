@@ -29,14 +29,18 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 	* @ignoreScanners.hint A comma seperated list of scanner ids to ignore
 	* @autofix.hint Use either off, prompt or automatic
 	* @failOnIssues.hint Determines if an exit code is set to 1 when issues are found.
+	* @debug.hint Enable debug mode
+	* @listScanners.hint List the types of scanners that are enabled, enabled automatically when verbose=true
 	**/
-	function run( string path=".", string resultFile, string resultFormat="json", boolean verbose=true, string listBy="type", string severity="default", string confidence="default", string ignoreScanners="", autofix="off", boolean failOnIssues=true, boolean debug=false)  {
+	function run( string path=".", string resultFile, string resultFormat="json", boolean verbose=true, string listBy="type", string severity="default", string confidence="default", string ignoreScanners="", autofix="off", boolean failOnIssues=true, boolean debug=false, boolean listScanners=false)  {
 		var fileInfo = "";
 		var severityLevel = 1;
 		var confLevel = 1;
 		var config = {};
 		var toFix = [];
 		if (arguments.verbose) {
+			arguments.listScanners = true;
+
 			print.greenLine("fixinator v#fixinatorClient.getClientVersion()# built by Foundeo Inc.").line();
 			print.grayLine("    ___                      _             ");
 			print.grayLine("   / __)                    | |            ");		
@@ -413,6 +417,25 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 					}
 				}
 			}
+
+			if (arguments.listScanners && local.results.keyExists("categories")) {
+				print.line();
+				print.line("Results by Scanner (confidence=#local.results.config.minConfidence#, severity=#local.results.config.minSeverity#):");
+				for (local.cat in local.results.categories) {
+					local.issues = 0;
+					for (local.i in local.results.results) {
+						if (local.i.id == local.cat) {
+							local.issues++;
+						}
+					}
+					if (local.issues == 0) {
+						print.greenLine("  ✓ " & local.results.categories[cat].name & " [" & cat & "]" );
+					} else {
+						print.redLine("  ! " & local.results.categories[cat].name & " [" & cat & "] (" & local.issues & ")"  );
+					}
+				}
+			}
+
 			/*
 			for (local.i in local.results.results) {
 				if (arguments.verbose) {

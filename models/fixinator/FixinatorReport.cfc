@@ -206,44 +206,66 @@
 		<cfset var resultsByScanner = {}>
 		<cfset var scannerCounts = {}>
 		<cfset var totalTypes = 0>
-		<cfset var typeTitle = {}>
+		<cfset var typeInfo = {}>
 		<cfset var typeKey = "">
 		<cfset var result = "">
-		<!--- sort into types --->
-		<cfloop array="#arguments.data.results#" index="local.i">
-			<cfset local.scanner = local.i.scanner>
-			<cfif NOT resultsByScanner.keyExists(local.scanner)>
-				<cfset resultsByScanner[local.scanner] = {}>
-				<cfset scannerCounts[local.scanner] = 0>
-			</cfif>
-			<cfset local.typeKey = local.i.id>
-			<cfif NOT resultsByScanner[local.scanner].keyExists(local.typeKey)>
-				<cfset resultsByScanner[local.scanner][local.typeKey] = []>
-				<cfset totalTypes = totalTypes + 1>
-				<cfif local.i.keyExists("title")>
-					<cfset typeTitle[local.i.id] = local.i.title>
-				<cfelse>
-					<cfset typeTitle[local.i.id] = local.i.id>
+
+		<cfset var suites = []>
+		<cfset var cat = "">
+		<cfset var suite = "">
+		<cfset var uuids = []>
+
+		<cfif arguments.data.keyExists("categories")>
+			<cfloop collection="#arguments.data.categories#" item="cat">
+				<cfset suite = duplicate(arguments.data.categories[cat])>
+				<cfset suite.id = cat>
+				<cfset suite.cases = []>
+				<cfloop array="#arguments.data.results#" index="local.i">
+					<cfif NOT local.i.keyExists("uuid")>
+						<cfset local.i.uuid = createUUID()>
+					</cfif>
+					<cfif local.i.id IS cat>
+						<cfset arrayAppend(suite.cases, local.i)>
+						<cfset arrayAppend(uuids, local.i.uuid)>
+					</cfif>
+				</cfloop>
+				<cfset arrayAppend(suites, suite)>
+			</cfloop>
+		<cfelse>
+			<cfthrow message="Missing categories data, make sure you are using the latest fixinator server version.">
+		</cfif>
+		<!--- ensure that nothing was missed due to missing category data --->
+		<cfif arrayLen(uuids) NEQ arrayLen(arguments.data.results)>
+			<cfset suite = {name="Uncategorized", description="Uncategorized issues", cases=[], type="Uncategorized", category="Uncategorized", id="uncategorized"}>
+			<cfloop array="#arguments.data.results#" index="local.i">
+				<cfif NOT arrayFind(uuids, local.i.uuid)>
+					<cfset arrayAppend(suite.cases, local.i)>
+					<cfset arrayAppend(uuids, local.i.uuid)>
 				</cfif>
-			</cfif>
-			<cfset scannerCounts[local.scanner] = scannerCounts[local.scanner]+1>
-			<cfset arrayAppend(resultsByScanner[local.scanner][local.typeKey], local.i)>
-		</cfloop>
+			</cfloop>
+			<cfset arrayAppend(suites, suite)>
+		</cfif>
 		<cfsavecontent variable="xml"><?xml version="1.0" encoding="UTF-8" ?>
 			<cfoutput>
-			<testsuites id="#dateTimeFormat(now(), 'yyyymmdd-HHmmss')#" name="Fixinator Scan Results (#dateTimeFormat(now(), 'yyyy-mm-dd HH:mm:ss')#" tests="#int(totalTypes)#" failures="#arrayLen(data.results)#" time="0">
-				<cfloop list="#structKeyList(resultsByScanner)#" index="local.scanner">
-					<testsuite id="#encodeForXML(local.scanner)#" name="#encodeForXML(local.scanner)#" tests="#structCount(resultsByScanner[local.scanner])#" failures="#scannerCounts[local.scanner]#" time="0">
-						<cfloop list="#structKeyList(resultsByScanner[local.scanner])#" index="local.typeKey">
-							<testcase id="#encodeForXMLAttribute(local.typeKey)#" name="#typeTitle[local.typeKey]# [#local.typeKey#]" time="0">
-								<cfloop array="#resultsByScanner[local.scanner][local.typeKey]#" index="result">
-									<failure message="#encodeForXMLAttribute(result.message)#" type="#getIndicatorAsText(result.severity)#">#getIndicatorAsText(result.severity)#: #encodeForXML(result.message)##chr(10)#File: #encodeForXML(result.path)##chr(10)#Line: #encodeForXML(result.line)#</failure>
-								</cfloop>
+				<testsuites id="#dateTimeFormat(now(), 'yyyymmdd-HHmmss')#" name="Fixinator Scan Results (#dateTimeFormat(now(), 'yyyy-mm-dd HH:mm:ss')#)" tests="#int(arrayLen(suites))#" failures="#arrayLen(data.results)#" time="0">
+				<cfloop array="#suites#" index="suite">
+					<cfset local.testCount = 1>
+					<cfif arrayLen(suite.cases) GT 1>
+						<cfset local.testCount = arrayLen(suite.cases)>
+					</cfif>
+					<testsuite id="#encodeForXML(suite.id)#" name="#encodeForXML(suite.name)# [#encodeForXML(suite.id)#]" tests="#local.testCount#" failures="#arrayLen(suite.cases)#" time="0">
+						<cfloop array="#suite.cases#" index="local.i">
+							<testcase id="#encodeForXMLAttribute(local.i.uuid)#" name="#encodeForXMLAttribute(local.i.title)#" classname="#replace(encodeForXMLAttribute(i.path), "&##x2f;", "/", "ALL")#" time="0">
+								<failure message="#encodeForXMLAttribute(i.message)#" type="#getIndicatorAsText(i.severity)#">#getIndicatorAsText(i.severity)#: #encodeForXML(i.message)##chr(10)#File: #replace(encodeForXML(i.path), "&##x2f;", "/", "ALL")##chr(10)#Line: #encodeForXML(i.line)#</failure>
 							</testcase>
 						</cfloop>
+						<cfif arrayLen(suite.cases) EQ 0>
+							<!--- passed --->
+							<testcase name="#encodeForXMLAttribute(suite.name)#" time="0" />
+						</cfif>
 					</testsuite>
 				</cfloop>
-			</testsuites>
+				</testsuites>
 			</cfoutput>
 		</cfsavecontent>
 		<cfreturn xml>

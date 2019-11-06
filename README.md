@@ -91,3 +91,7 @@ Default: `high` - The minimum confidence level that will be flagged. Issues with
 
 Default: `true` - When true returns an exit code of `1` when issues are found, this will cause your build to fail if you are running in CI. If you do not want the build to fail when issues are found, set this to `false`.
 
+### listScanners
+
+Default: `false` - Prints out a list of scanners supported by the server in the results. Automatically set to `true` when `verbose` is `true`
+

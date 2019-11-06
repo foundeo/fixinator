@@ -26,7 +26,7 @@ component singleton="true" {
 
 	public function run(string path, struct config={}, any progressBar="") {
 		var files = "";
-		var payload = {"config"=getDefaultConfig(), "files"=[]};
+		var payload = {"config"=getDefaultConfig(), "files"=[], "categories"=true};
 		var results = {"warnings":[], "results":[], "payloads":[]};
 		var size = 0;
 		var pathData = getFileInfo(arguments.path);
@@ -76,13 +76,13 @@ component singleton="true" {
 		variables.fixinator_shared[local.lock_name] = {fileCounter=0, pendingCounter=0, totalFileCount=arrayLen(files), lastPercentValue=0, error=0};
 		local.batches = [{batchType:"progressBar", hasProgressBar:hasProgressBar, progressBar:progressBar, lock_name=local.lock_name}];
 		
-		local.batch = {files:[], batchType:"files", lock_name:local.lock_name, baseDir:baseDir, config:payload.config};
+		local.batch = {files:[], batchType:"files", categories:true, lock_name:local.lock_name, baseDir:baseDir, config:payload.config};
 		
 		for (local.f in files) {
 			arrayAppend(local.batch.files, local.f);
 			if (arrayLen(local.batch.files) >= local.filesPerBatch) {
 				arrayAppend(local.batches, local.batch);
-				local.batch = {files:[], batchType:"files", lock_name:local.lock_name, baseDir:baseDir, config:payload.config};
+				local.batch = {files:[], batchType:"files", categories:false, lock_name:local.lock_name, baseDir:baseDir, config:payload.config};
 			}
 		}
 
@@ -113,7 +113,11 @@ component singleton="true" {
 						arrayAppend(results.warnings, local.batch.results.warnings, true);
 					}
 				}
+				if(local.batch.results.keyExists("categories") && isStruct(local.batch.results.categories) && !structIsEmpty(local.batch.results.categories)) {
+					results["categories"] = local.batch.results.categories;
+				} 
 			}
+
 		}
 
 		
@@ -161,7 +165,7 @@ component singleton="true" {
 
 				element.results = {"warnings":[], "results":[], "payloads":[]};
 				local.size = 0;
-				local.payload = {"config"=element.config, "files"=[]};
+				local.payload = {"config"=element.config, "files"=[], "categories":element.categories};
 
 				for (local.f in element.files) {
 					cflock(name=element.lock_name, type="exclusive", timeout="30") {
@@ -185,10 +189,14 @@ component singleton="true" {
 										variables.fixinator_shared[element.lock_name].pendingCounter+=arrayLen(payload.files);	
 									}
 									local.result = sendPayload(payload);
+
 									cflock(name=element.lock_name, type="exclusive", timeout="30") {
 										variables.fixinator_shared[element.lock_name].pendingCounter-=arrayLen(payload.files);	
 									}
 									arrayAppend(element.results.results, local.result.results, true);
+									if (local.result.keyExists("categories")) {
+										element.results["categories"] = local.result.categories;
+									} 
 									payload.result = local.result;
 									//arrayAppend(results.payloads, payload);
 									local.size = 0;
@@ -212,6 +220,9 @@ component singleton="true" {
 						variables.fixinator_shared[element.lock_name].pendingCounter-=arrayLen(payload.files);	
 					}
 					payload.result = local.result;
+					if (local.result.keyExists("categories")) {
+						element.results["categories"] = local.result.categories;
+					} 
 					//arrayAppend(results.payloads, payload);
 					arrayAppend(element.results.results, local.result.results, true);
 				}

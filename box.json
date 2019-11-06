@@ -1,8 +1,8 @@
 {
     "name":"fixinator",
-    "version":"1.0.30",
+    "version":"1.0.31",
     "author":"Foundeo Inc.",
-    "location":"foundeo/fixinator#v1.0.30",
+    "location":"foundeo/fixinator#v1.0.31",
     "homepage":"https://fixinator.app/",
     "documentation":"https://github.com/foundeo/fixinator",
     "repository":{
@@ -27,7 +27,7 @@
     "scripts":{
         "postVersion":"package set location='foundeo/fixinator#v`package version`'",
         "onRelease":"publish",
-        "postPublish":"!git push && !git push --tags"
+        "postPublish":"!git push && git push --tags"
     },
     "ignore":[]
 }

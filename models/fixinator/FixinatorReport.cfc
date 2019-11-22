@@ -12,6 +12,11 @@
 		<cfargument name="resultFile" default="">
 		<cfargument name="data">
 		<cfargument name="listBy" type="string" default="type">
+		<!--- make sure user is not passing a directory --->
+		<cfif directoryExists(arguments.resultFile)>
+			<cfthrow message="Please specify a file name in resultFile, not a directory.">
+		</cfif>
+		
 		<cfif format IS "json">
 			<cfset fileWrite(arguments.resultFile, serializeJSON(arguments.data))>
 		<cfelseif format IS "html">

@@ -39,8 +39,8 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 		var config = {};
 		var toFix = [];
 		if (arguments.verbose) {
-			arguments.listScanners = true;
-
+			//arguments.listScanners = true;
+			
 			print.greenLine("fixinator v#fixinatorClient.getClientVersion()# built by Foundeo Inc.").line();
 			print.grayLine("    ___                      _             ");
 			print.grayLine("   / __)                    | |            ");		

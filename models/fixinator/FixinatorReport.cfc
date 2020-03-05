@@ -262,7 +262,7 @@
 					</cfif>
 					<testsuite id="#encodeForXML(suite.id)#" name="#encodeForXML(suite.name)# [#encodeForXML(suite.id)#]" package="fixinator" tests="#local.testCount#" failures="#arrayLen(suite.cases)#" time="0">
 						<cfloop array="#suite.cases#" index="local.i">
-							<testcase id="#encodeForXMLAttribute(local.i.uuid)#" name="#encodeForXMLAttribute(local.i.title)#" classname="#replace(encodeForXMLAttribute(i.path), "&##x2f;", "/", "ALL")#" time="0">
+							<testcase id="#encodeForXMLAttribute(local.i.uuid)#" name="#encodeForXMLAttribute(local.i.title)#" classname="#encodeForXmlAttribute(getClassNameFromFilePath(local.i.path))#" time="0">
 								<failure message="#encodeForXMLAttribute(i.message)#" type="#getIndicatorAsText(i.severity)#">#getIndicatorAsText(i.severity)#: #encodeForXML(i.message)##chr(10)#File: #replace(encodeForXML(i.path), "&##x2f;", "/", "ALL")##chr(10)#Line: #encodeForXML(i.line)#</failure>
 							</testcase>
 						</cfloop>

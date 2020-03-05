@@ -17,8 +17,14 @@ component singleton="true" {
 			local.path = getCurrentTemplatePath();
 			local.path = replace(local.path, "\", "/", "ALL");
 			local.path = replace(local.path, "/models/fixinator/FixinatorClient.cfc", "/box.json");
-			local.data = deserializeJSON(fileRead(local.path));
-			variables.clientVersion = local.data.version;
+			if (fileExists(local.path)) {
+				local.data = deserializeJSON(fileRead(local.path));
+				variables.clientVersion = local.data.version;	
+			} else {
+				//unknown
+				return "0.0.0";
+			}
+			
 		}
 		return variables.clientVersion;	
 		
@@ -388,7 +394,7 @@ component singleton="true" {
 
 	public function filterPaths(baseDirectory, paths, config) {
 		var f = "";
-		var ignoredPaths = ["/.git/","\.git\","/.svn/","\.svn\", ".git/"];
+		var ignoredPaths = ["/.git/","\.git\","/.svn/","\.svn\", ".git/", ".hg/", "/.hg/"];
 		var ignoredExtensions = ["jpg","png","txt","pdf","dat", "doc","docx","gif","css","zip","bak","exe","pack","log","csv","xsl","xslx","psd","ai", "svg", "ttf", "woff", "ttf", "gz", "tar", "7z", "epub", "mobi", "ppt", "pptx"];
 		var filteredPaths = [];
 		//always ignore git paths

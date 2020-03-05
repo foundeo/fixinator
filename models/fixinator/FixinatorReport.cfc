@@ -31,6 +31,8 @@
 			<cfset fileWrite(arguments.resultFile, generateJUnitReport(data=arguments.data))>
 		<cfelseif format IS "sast">
 			<cfset fileWrite(arguments.resultFile, generateSASTReport(data=arguments.data))>
+		<cfelseif format IS "findbugs">
+			<cfset fileWrite(arguments.resultFile, generateFindBugsReport(data=arguments.data))>
 		<cfelse>
 			<cfthrow message="Unsupported result file format">
 		</cfif>
@@ -258,7 +260,7 @@
 					<cfif arrayLen(suite.cases) GT 1>
 						<cfset local.testCount = arrayLen(suite.cases)>
 					</cfif>
-					<testsuite id="#encodeForXML(suite.id)#" name="#encodeForXML(suite.name)# [#encodeForXML(suite.id)#]" tests="#local.testCount#" failures="#arrayLen(suite.cases)#" time="0">
+					<testsuite id="#encodeForXML(suite.id)#" name="#encodeForXML(suite.name)# [#encodeForXML(suite.id)#]" package="fixinator" tests="#local.testCount#" failures="#arrayLen(suite.cases)#" time="0">
 						<cfloop array="#suite.cases#" index="local.i">
 							<testcase id="#encodeForXMLAttribute(local.i.uuid)#" name="#encodeForXMLAttribute(local.i.title)#" classname="#replace(encodeForXMLAttribute(i.path), "&##x2f;", "/", "ALL")#" time="0">
 								<failure message="#encodeForXMLAttribute(i.message)#" type="#getIndicatorAsText(i.severity)#">#getIndicatorAsText(i.severity)#: #encodeForXML(i.message)##chr(10)#File: #replace(encodeForXML(i.path), "&##x2f;", "/", "ALL")##chr(10)#Line: #encodeForXML(i.line)#</failure>
@@ -359,6 +361,47 @@
 			<cfset arrayAppend(sast.vulnerabilities, v)>
 		</cfloop>
 		<cfreturn serializeJSON(sast)>
+	</cffunction>
+
+	<cffunction name="generateFindBugsReport">
+		<cfargument name="data">
+		<cfset var ts = dateDiff("s", "January 1 1970 00:00", DateConvert("Local2utc", now())) & "000">
+		<cfset var cat = "">
+		<!--- based on this example: https://github.com/jenkinsci/analysis-model/blob/master/src/test/resources/edu/hm/hafner/analysis/parser/findbugs/findbugs-native.xml --->
+		<cfsavecontent variable="xml"><?xml version="1.0" encoding="UTF-8" ?>
+			<BugCollection version="1.2.1" sequence="0" timestamp="#encodeForXMLAttribute(ts)#" analysisTimestamp="#encodeForXMLAttribute(ts)#">
+
+				<cfloop collection="#arguments.data.categories#" item="cat">
+					<cfset local.cases = []>
+					<cfloop array="#arguments.data.results#" index="local.i">
+						<cfif local.i.id IS cat>
+							<cfset arrayAppend(local.cases, local.i)>
+						</cfif>
+					</cfloop>
+					<cfif arrayLen(local.cases)>
+						<cfoutput>
+							<BugInstance type="FIXINATOR_#encodeForXMLAttribute(cat)#">
+								<ShortMessage>#encodeForXML(arguments.data.categories[cat].name)#</ShortMessage>
+								<cfloop array="#local.cases#" index="local.i">
+									<SourceLine classname="#encodeForXMLAttribute(getClassNameFromFilePath(i.path))#" start="#encodeForXMLAttribute(i.line)#" end="#encodeForXMLAttribute(i.line)#"  sourcefile="#encodeForXmlAttribute(getFileFromPath(i.path))#" sourcepath="#encodeForXMLAttribute(i.path)#" >
+	      								<Message>#getIndicatorAsText(i.severity)# #encodeForXML(i.message)#: #encodeForXml(getFileFromPath(i.path))#:[line #encodeForXML(i.line)#] BlockCrcUpgrade.java:[line 1446]</Message>
+	    							</SourceLine>
+								</cfloop>
+							</BugInstance>
+						</cfoutput>
+					</cfif>	
+				</cfloop>
+			</BugCollection>
+		</cfsavecontent>
+		<cfreturn xml>
+	</cffunction>
+
+	<cffunction name="getClassNameFromFilePath" returntype="string" output="false">
+		<cfargument name="path">
+		<cfset var p = arguments.path>
+		<cfset p = replace(p, "\", "/", "ALL")>
+		<cfset p = reReplace(p, "^/?(.+)\.[a-zA-Z0-9]+$", "\1")>
+		<cfreturn replace(p, "/", ".", "ALL")>
 	</cffunction>
 
 	<cffunction name="getIndicatorAsText" access="private">

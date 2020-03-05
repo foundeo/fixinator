@@ -18,7 +18,7 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 	/**
 	* @path.hint A file or directory to scan
 	* @resultFile.hint A file path to write the results to - see resultFormat
-	* @resultFormat.hint The format to write the results in [json,html,pdf,junit]
+	* @resultFormat.hint The format to write the results in [json,html,pdf,junit,findbugs,sast]
 	* @resultFormat.optionsUDF resultFormatComplete
 	* @verbose.hint When false limits the output
 	* @listBy.hint Show results by type or file
@@ -493,7 +493,7 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 	}
 
 	function resultFormatComplete() {
-		return [ 'html', 'json', 'pdf', 'junit' ];
+		return [ 'html', 'json', 'pdf', 'junit', 'findbugs', 'sast' ];
 	}
 
 	function confidenceComplete() {

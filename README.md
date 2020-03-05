@@ -39,7 +39,7 @@ Writes results to a file specified by the path in resultFile.
 
 ### resultFormat
 
-Specify either `json` (default), `html`, `pdf`, `junit`, or `sast`.
+Specify either `json` (default), `html`, `pdf`, `junit`, `sast`, or `findbugs`.
 
 ## Environment Variables
 
@@ -95,3 +95,14 @@ Default: `true` - When true returns an exit code of `1` when issues are found, t
 
 Default: `false` - Prints out a list of scanners supported by the server in the results. Automatically set to `true` when `verbose` is `true`
 
+## Ignoring issues in code
+
+You can ignore an issue in your source code by adding a comment like this:
+
+	<cfquery>
+		SELECT x FROM table
+		<!--- ignore:sqlinjection - #id# is not vulnerable to SQL injection because of XYZ --->
+		WHERE id = #id#
+	</cfquery>
+
+The comment must be on the same line as the issue, or on the line above the issue. It must include `ignore:issueType` where `issueType` is the fixinator id type for the issue. Fully supported in cfscript as well.

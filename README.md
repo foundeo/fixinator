@@ -49,9 +49,38 @@ The following environment variables are used by fixinator:
 
 The `FIXINATOR_API_KEY` environment variable holds an API key which will be passed to the Fixinator API service via the `x-api-key` HTTP request header. Please visit <https://fixinator.app/> to obtain a key.
 
-### FIXINATOR_API_URL
+You can also set this value by running:
 
-The `FIXINATOR_API_URL` environment variable points to the URL of the Fixinator API service. If you are running fixinator locally you will want to point this to your local API instance. If you are using the public API then you do not need to set this variable.
+	box config set modules.fixinator.api_key=YOUR_API_KEY
+
+### FIXINATOR_API_URL `ENTERPRISE EDITION`
+
+The `FIXINATOR_API_URL` environment variable points to the URL of the Fixinator API service. If you are running fixinator locally you will want to point this to your local API instance (enterprise edition). If you are using the public API then you do not need to set this variable.
+
+You can also set this value by running:
+
+	box config set modules.fixinator.api_url=http://127.0.0.1:1234/scan/
+
+
+### FIXINATOR_MAX_PAYLOAD_SIZE `ENTERPRISE EDITION`
+
+The `FIXINATOR_MAX_PAYLOAD_SIZE` envrionment variables controls the size of a payload that is sent to the fixinator api server at a time, as well as the max file size. The unit for this setting is bytes.
+
+You can also set this value by running:
+
+	box config set modules.fixinator.max_payload_size=numberOfBytes
+
+This variable should only be used with the enterprise edition otherwise you may run into issues.
+
+### FIXINATOR_MAX_PAYLOAD_FILE_COUNT `ENTERPRISE EDITION`
+
+The `FIXINATOR_MAX_PAYLOAD_FILE_COUNT` envrionment variables controls the maximum number of files sent the fixinator api server at a time.
+
+You can also set this value by running:
+
+	box config set modules.fixinator.max_payload_file_count=numberOfFiles
+
+This variable should only be used with the enterprise edition otherwise you may run into issues.
 
 ## .fixinator.json
 

@@ -137,6 +137,14 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 			fixinatorClient.setAPIURL(configService.getSetting("modules.fixinator.api_url", "UNDEFINED"));
 		}
 
+		if (configService.getSetting("modules.fixinator.max_payload_size", "UNDEFINED") != "UNDEFINED") {
+			fixinatorClient.setMaxPayloadSize(configService.getSetting("modules.fixinator.max_payload_size", "UNDEFINED"));
+		}
+
+		if (configService.getSetting("modules.fixinator.max_payload_file_count", "UNDEFINED") != "UNDEFINED") {
+			fixinatorClient.setMaxPayloadFileCount(configService.getSetting("modules.fixinator.max_payload_file_count", "UNDEFINED"));
+		}
+
 		if (arguments.verbose) {
 			print.greenLine("Fixinator API Server: #fixinatorClient.getAPIURL()#");
 		}

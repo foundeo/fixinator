@@ -1,11 +1,18 @@
 component singleton="true" {
 
-	variables.maxPayloadSize = 1 * 640 * 1024;//half mb+128b
-	variables.maxPayloadFileCount = 35;
-	variables.apiURL = "https://api.fixinator.app/v1/scan";
 	variables.system = createObject("java", "java.lang.System");
+	variables.maxPayloadSize = 1 * 640 * 1024;//half mb+128b
+	if (!isNull(variables.system.getenv("FIXINATOR_MAX_PAYLOAD_SIZE"))) {
+		variables.maxPayloadSize = trim(variables.system.getenv("FIXINATOR_MAX_PAYLOAD_SIZE"));
+	}
+	variables.maxPayloadFileCount = 35;
+	if (!isNull(variables.system.getenv("FIXINATOR_MAX_PAYLOAD_FILE_COUNT"))) {
+		variables.maxPayloadFileCount = trim(variables.system.getenv("FIXINATOR_MAX_PAYLOAD_FILE_COUNT"));
+	}
+	variables.apiURL = "https://api.fixinator.app/v1/scan";
+	
 	if (!isNull(variables.system.getenv("FIXINATOR_API_URL"))) {
-		variables.apiURL = variables.system.getenv("FIXINATOR_API_URL");
+		variables.apiURL = trim(variables.system.getenv("FIXINATOR_API_URL"));
 	}
 
 	variables.clientUpdate = false;
@@ -143,6 +150,14 @@ component singleton="true" {
 
 	public function setAPIURL(string apiURL) {
 		variables.apiURL = arguments.apiURL;
+	}
+
+	public function setMaxPayloadSize(numeric size) {
+		variables.maxPayloadSize = arguments.size;
+	}
+
+	public function setMaxPayloadFileCount(numeric count) {
+		variables.maxPayloadFileCount = arguments.count;
 	}
 
 	private function processBatch(element, index) {

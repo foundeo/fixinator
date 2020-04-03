@@ -64,7 +64,7 @@ You can also set this value by running:
 
 ### FIXINATOR_MAX_PAYLOAD_SIZE `ENTERPRISE EDITION`
 
-The `FIXINATOR_MAX_PAYLOAD_SIZE` envrionment variables controls the size of a payload that is sent to the fixinator api server at a time, as well as the max file size. The unit for this setting is bytes.
+The `FIXINATOR_MAX_PAYLOAD_SIZE` environment variables controls the size of a payload that is sent to the fixinator api server at a time, as well as the max file size. The unit for this setting is bytes.
 
 You can also set this value by running:
 
@@ -74,7 +74,7 @@ This variable should only be used with the enterprise edition otherwise you may 
 
 ### FIXINATOR_MAX_PAYLOAD_FILE_COUNT `ENTERPRISE EDITION`
 
-The `FIXINATOR_MAX_PAYLOAD_FILE_COUNT` envrionment variables controls the maximum number of files sent the fixinator api server at a time.
+The `FIXINATOR_MAX_PAYLOAD_FILE_COUNT` environment variables controls the maximum number of files sent the fixinator api server at a time.
 
 You can also set this value by running:
 

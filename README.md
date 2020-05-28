@@ -134,4 +134,7 @@ You can ignore an issue in your source code by adding a comment like this:
 		WHERE id = #id#
 	</cfquery>
 
-The comment must be on the same line as the issue, or on the line above the issue. It must include `ignore:issueType` where `issueType` is the fixinator id type for the issue. Fully supported in cfscript as well.
+The comment must be on the same line as the issue, or on the line above the issue. It must include `ignore:issueType` where `issueType` is the fixinator id type for the issue. Fully supported in cfscript as well, for example:
+
+	//ignore:iif - b and a are safe variables because... 
+	x = iif(c, b, a)

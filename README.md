@@ -35,11 +35,11 @@ It is highly recommended that you use `autofix` only with code that is under ver
 
 ### resultFile
 
-Writes results to a file specified by the path in resultFile.
+Writes results to a file specified by the path in resultFile. You may specify a comma seperated list of paths if you want to write multiple formats.
 
 ### resultFormat
 
-Specify either `json` (default), `html`, `pdf`, `junit`, `sast`, or `findbugs`.
+Specify a format for the `resultFile`:  `json` (default), `html`, `pdf`, `junit`, `sast`, or `findbugs`. You may specify a comma seperated list of formats and `resultFile` paths if you want to write multiple files.
 
 ## Environment Variables
 

@@ -87,7 +87,12 @@ component singleton="true" {
 			variables.fixinator_shared = {};
 		}
 		variables.fixinator_shared[local.lock_name] = {fileCounter=0, pendingCounter=0, totalFileCount=arrayLen(files), lastPercentValue=0, error=0};
-		local.batches = [{batchType:"progressBar", hasProgressBar:hasProgressBar, progressBar:progressBar, lock_name=local.lock_name}];
+		if (hasProgressBar) {
+			local.batches = [{batchType:"progressBar", hasProgressBar:hasProgressBar, progressBar:progressBar, lock_name=local.lock_name}];	
+		} else {
+			local.batches = [];
+		}
+		
 		
 		local.batch = {files:[], batchType:"files", categories:true, lock_name:local.lock_name, baseDir:baseDir, config:payload.config};
 		

@@ -110,6 +110,11 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 			return;
 		}
 
+		//since api url is referenced below, set this first
+		if (configService.getSetting("modules.fixinator.api_url", "UNDEFINED") != "UNDEFINED") {
+			fixinatorClient.setAPIURL(configService.getSetting("modules.fixinator.api_url", "UNDEFINED"));
+		}
+
 		if (configService.getSetting("modules.fixinator.accept_policy", "UNDEFINED") == "UNDEFINED") {
 			print.line();
 			print.line("Fixinator will send source code to: " & fixinatorClient.getAPIURL());
@@ -133,9 +138,7 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 			
 		}
 
-		if (configService.getSetting("modules.fixinator.api_url", "UNDEFINED") != "UNDEFINED") {
-			fixinatorClient.setAPIURL(configService.getSetting("modules.fixinator.api_url", "UNDEFINED"));
-		}
+		
 
 		if (configService.getSetting("modules.fixinator.max_payload_size", "UNDEFINED") != "UNDEFINED") {
 			fixinatorClient.setMaxPayloadSize(configService.getSetting("modules.fixinator.max_payload_size", "UNDEFINED"));
@@ -273,8 +276,14 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 		}
 		
 		if (len(arguments.resultFile)) {
-			arguments.resultFile = fileSystemUtil.resolvePath( arguments.resultFile );
-			fixinatorReport.generateReport(resultFile=arguments.resultFile, format=arguments.resultFormat, listBy=arguments.listBy, data=local.results);
+			local.resultIndex = 0;
+			//allow a list of formats and file paths
+			for (local.rFormat in listToArray(arguments.resultFormat)) {
+				local.resultIndex++;
+				local.rFile = listGetAt(arguments.resultFile, local.resultIndex);
+				local.rFile = fileSystemUtil.resolvePath( local.rFile );	
+				fixinatorReport.generateReport(resultFile=local.rFile, format=local.rFormat, listBy=arguments.listBy, data=local.results);	
+			}
 		}
 
 

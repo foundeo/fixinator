@@ -115,7 +115,7 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 			fixinatorClient.setAPIURL(configService.getSetting("modules.fixinator.api_url", "UNDEFINED"));
 		}
 
-		if (configService.getSetting("modules.fixinator.accept_policy", "UNDEFINED") == "UNDEFINED") {
+		if (fixinatorClient.isCloudAPIURL() && configService.getSetting("modules.fixinator.accept_policy", "UNDEFINED") == "UNDEFINED") {
 			print.line();
 			print.line("Fixinator will send source code to: " & fixinatorClient.getAPIURL());
 			print.line("for scanning. The code is kept in RAM during scanning and is not persisted.");

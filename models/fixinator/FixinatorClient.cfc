@@ -9,7 +9,8 @@ component singleton="true" {
 	if (!isNull(variables.system.getenv("FIXINATOR_MAX_PAYLOAD_FILE_COUNT"))) {
 		variables.maxPayloadFileCount = trim(variables.system.getenv("FIXINATOR_MAX_PAYLOAD_FILE_COUNT"));
 	}
-	variables.apiURL = "https://api.fixinator.app/v1/scan";
+	variables.cloudAPIURL = "https://api.fixinator.app/v1/scan";
+	variables.apiURL = variables.cloudAPIURL;
 	
 	if (!isNull(variables.system.getenv("FIXINATOR_API_URL"))) {
 		variables.apiURL = trim(variables.system.getenv("FIXINATOR_API_URL"));
@@ -151,6 +152,10 @@ component singleton="true" {
 
 	public function getAPIURL() {
 		return variables.apiURL;
+	}
+
+	public function isCloudAPIURL() {
+		return getAPIURL() == variables.cloudAPIURL;
 	}
 
 	public function setAPIURL(string apiURL) {

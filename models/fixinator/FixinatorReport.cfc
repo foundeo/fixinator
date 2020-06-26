@@ -33,9 +33,50 @@
 			<cfset fileWrite(arguments.resultFile, generateSASTReport(data=arguments.data))>
 		<cfelseif format IS "findbugs">
 			<cfset fileWrite(arguments.resultFile, generateFindBugsReport(data=arguments.data))>
+		<cfelseif format IS "csv">
+			<cfset fileWrite(arguments.resultFile, generateCSVReport(data=arguments.data))>
 		<cfelse>
 			<cfthrow message="Unsupported result file format">
 		</cfif>
+	</cffunction>
+
+	<cffunction name="generateCSVReport" returntype="string" output="false">
+		<cfargument name="data">
+		<cfset var csv = "">
+		<cfset var crlf = Chr(13) & chr(10)>
+		<cfsavecontent variable="csv">"Path","Line","Column","Position","Severity","Confidence","Category","Title","Message","Description","Scanner","Type","Identifier","Context","Fix"</cfsavecontent>
+		<cfset csv &= crlf> 
+		<cfloop array="#arguments.data.results#" index="local.i">
+			<cfset csv &= """" & csvColumnFormat(local.i.path) & """,">
+			<cfset csv &= """" & csvColumnFormat(local.i.line) & """,">
+			<cfset csv &= """" & csvColumnFormat(local.i.column) & """,">
+			<cfset csv &= """" & csvColumnFormat(local.i.position) & """,">
+			<cfset csv &= """" & csvColumnFormat(local.i.severity) & """,">
+			<cfset csv &= """" & csvColumnFormat(local.i.confidence) & """,">
+			<cfset csv &= """" & csvColumnFormat(local.i.category) & """,">
+			<cfset csv &= """" & csvColumnFormat(local.i.title) & """,">
+			<cfset csv &= """" & csvColumnFormat(local.i.message) & """,">
+			<cfset csv &= """" & csvColumnFormat(local.i.description) & """,">
+			<cfset csv &= """" & csvColumnFormat(local.i.scanner) & """,">
+			<cfset csv &= """" & csvColumnFormat(local.i.type) & """,">
+			<cfset csv &= """" & csvColumnFormat(local.i.id) & """,">
+			<cfset csv &= """" & csvColumnFormat(local.i.context) & """,">
+			<cfif local.i.keyExists("fixes") AND arrayLen(local.i.fixes) GT 0>
+				<cfset csv &= """" & csvColumnFormat(local.i.fixes[1].fixCode) & """">
+			<cfelse>
+				<cfset csv &= """""">
+			</cfif>
+			<cfset csv &= crlf>
+		</cfloop>
+		<cfreturn csv>
+	</cffunction>
+
+	<cffunction name="csvColumnFormat" returntype="string" output="false">
+		<cfargument name="str">
+		<cfset var c = replace(arguments.str, """", """""", "ALL")>
+		<cfset c = replace(c, chr(10), " ", "ALL")>
+		<cfset c = replace(c, chr(13), "", "ALL")>
+		<cfreturn c>
 	</cffunction>
 
 	<cffunction name="generateHTMLReport" output="false" access="public">
@@ -71,6 +112,7 @@
 					body, td, th {
 						font-family: "Helvetica Neue", Helvetica;
 						font-weight: 200;
+						max-width: 1000px;
 					}
 					.type-key {
 						border-bottom: 1px solid black;
@@ -83,6 +125,7 @@
 						margin-left: 15px;
 						border-left: 1px solid black;
 						padding: 10px;
+						overflow-y: scroll;
 					}
 					.issue-badges {
 						margin-left: 15px;
@@ -138,7 +181,15 @@
 									</cfif>
 									
 									<cfif len(local.i.context)>
-										<pre class="issue-context">#encodeForHTML(local.i.context)#</pre>
+										<pre class="issue-context">#encodeForHTML(left(local.i.context, 300))#</pre>
+									</cfif>
+									<cfif local.i.keyExists("fixes") AND arrayLen(local.i.fixes)>
+										<h5>Suggested Fix<cfif arrayLen(local.i.fixes) GT 1>es</cfif></h5>
+										<ol>
+											<cfloop array="#local.i.fixes#" index="local.fix">
+												<li>Replace: <code>#encodeForHTML(local.fix.replaceString)#</code> with: <code>#encodeForHTML(local.fix.fixCode)#</code></li>
+											</cfloop>
+										</ol>
 									</cfif>
 								</div>
 							</cfloop>

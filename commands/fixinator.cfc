@@ -18,7 +18,7 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 	/**
 	* @path.hint A file or directory to scan
 	* @resultFile.hint A file path to write the results to - see resultFormat
-	* @resultFormat.hint The format to write the results in [json,html,pdf,junit,findbugs,sast]
+	* @resultFormat.hint The format to write the results in [json,html,pdf,junit,findbugs,sast,csv]
 	* @resultFormat.optionsUDF resultFormatComplete
 	* @verbose.hint When false limits the output
 	* @listBy.hint Show results by type or file
@@ -31,13 +31,15 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 	* @failOnIssues.hint Determines if an exit code is set to 1 when issues are found.
 	* @debug.hint Enable debug mode
 	* @listScanners.hint List the types of scanners that are enabled, enabled automatically when verbose=true
+	* @ignorePaths.hint A globber paths pattern to exclude
 	**/
-	function run( string path=".", string resultFile, string resultFormat="json", boolean verbose=true, string listBy="type", string severity="default", string confidence="default", string ignoreScanners="", autofix="off", boolean failOnIssues=true, boolean debug=false, boolean listScanners=false)  {
+	function run( string path=".", string resultFile, string resultFormat="json", boolean verbose=true, string listBy="type", string severity="default", string confidence="default", string ignoreScanners="", autofix="off", boolean failOnIssues=true, boolean debug=false, boolean listScanners=false, string ignorePaths="")  {
 		var fileInfo = "";
 		var severityLevel = 1;
 		var confLevel = 1;
 		var config = {};
 		var toFix = [];
+		var paths = [];
 		if (arguments.verbose) {
 			//arguments.listScanners = true;
 			
@@ -51,6 +53,8 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 			print.grayLine("                                         inc.");
 			print.line();
 		}
+
+
 
 		if (configService.getSetting("modules.fixinator.api_key", "UNDEFINED") != "UNDEFINED") {
 			fixinatorClient.setAPIKey(configService.getSetting("modules.fixinator.api_key", "UNDEFINED"));
@@ -158,8 +162,43 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 		}
 
 
+		if (arguments.path contains "*" || arguments.path contains "," || len(arguments.ignorePaths)) {
+			local.newPath = arguments.path.listMap( (p) => fileSystemUtil.resolvePath( p ) );
+			local.glob = globber(local.newPath);
+			if ( val(listFirst(shell.getVersion(), ".")) GTE 5 ) {
+				local.glob = local.glob.setExcludePattern(arguments.ignorePaths);
+			} else if (len(arguments.ignorePaths)) {
+				error("You specified ignorePaths, but you are using an old version of CommandBox: #shell.getVersion()#. Upgrade to the latest version >=5");
+			}
+			paths = local.glob.asArray().matches();
+			if (arrayLen(paths) == 0) {
+				//no files match globber
+				error("No files matched your globber patterns");
+			}
+			print.greenLine(serializeJSON(paths));
+			if (find("*", arguments.path) || find(",", arguments.path)) {
+				arguments.path = "";
+				local.pathsBelowCurrent = 0;
+				for (local.p in paths) {
+					if (find(shell.pwd(), local.p) == 1) {
+						local.pathsBelowCurrent++;
+					}
+				}
+				if (local.pathsBelowCurrent == arrayLen(paths)) {
+					//all paths are under current path so set that as the base path
+					arguments.path = shell.pwd();
+				}
+			} else {
+				arguments.path = fileSystemUtil.resolvePath( arguments.path );
+			}
+			//return;
+		} else {
+			//single path
+			arguments.path = fileSystemUtil.resolvePath( arguments.path );
+		}
+
 		
-		arguments.path = fileSystemUtil.resolvePath( arguments.path );
+		
 
 
 
@@ -187,7 +226,7 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 		}
 
 
-		if (!fileExists(arguments.path) && !directoryExists(arguments.path)) {
+		if (!fileExists(arguments.path) && !directoryExists(arguments.path) && !arrayLen(paths)) {
 			print.boldRedLine("Sorry: #arguments.path# is not a file or directory.");
 			return;
 		}
@@ -242,7 +281,7 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 				progressBar.clear();
 				job.start("Scanning " & arguments.path);
 				progressBar.update( percent=0 );
-				local.results = fixinatorClient.run(path=arguments.path,config=config, progressBar=progressBar);	
+				local.results = fixinatorClient.run(path=arguments.path,config=config, progressBar=progressBar, paths=paths);	
 				progressBar.clear();
 			} else {
 				//no progress bar or interactive job output
@@ -510,7 +549,7 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 	}
 
 	function resultFormatComplete() {
-		return [ 'html', 'json', 'pdf', 'junit', 'findbugs', 'sast' ];
+		return [ 'html', 'json', 'pdf', 'junit', 'findbugs', 'sast', 'csv' ];
 	}
 
 	function confidenceComplete() {

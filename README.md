@@ -9,7 +9,7 @@ When running the `fixinator` command via the command line you can set the follow
 
 ### path
 
-The folder or file to scan.
+The folder or file to scan. As of version 2.0 you can also pass a file globber pattern.
 
 ### confidence
 
@@ -39,7 +39,12 @@ Writes results to a file specified by the path in resultFile. You may specify a 
 
 ### resultFormat
 
-Specify a format for the `resultFile`:  `json` (default), `html`, `pdf`, `junit`, `sast`, or `findbugs`. You may specify a comma seperated list of formats and `resultFile` paths if you want to write multiple files.
+Specify a format for the `resultFile`:  `json` (default), `html`, `pdf`, `csv`, `junit`, `sast`, or `findbugs`. You may specify a comma seperated list of formats and `resultFile` paths if you want to write multiple files.
+
+
+### ignorePaths
+
+A file globber pattern of paths to ignore from the scan.
 
 ## Environment Variables
 
@@ -137,4 +142,4 @@ You can ignore an issue in your source code by adding a comment like this:
 The comment must be on the same line as the issue, or on the line above the issue. It must include `ignore:issueType` where `issueType` is the fixinator id type for the issue. Fully supported in cfscript as well, for example:
 
 	//ignore:iif - b and a are safe variables because... 
-	x = iif(c, b, a)
+	x = iif(c, b, a);

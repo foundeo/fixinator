@@ -38,17 +38,24 @@ component singleton="true" {
 		
 	}
 
-	public function run(string path, struct config={}, any progressBar="") {
+	public function run(string path, struct config={}, any progressBar="", array paths=[]) {
 		var files = "";
 		var payload = {"config"=getDefaultConfig(), "files"=[], "categories"=true};
 		var results = {"warnings":[], "results":[], "payloads":[]};
 		var size = 0;
-		var pathData = getFileInfo(arguments.path);
+		var pathData = {};
 		var fileCounter = 0;
 		var percentValue = 0;
 		var hasProgressBar = isObject(arguments.progressBar);
-		var baseDir = getDirectoryFromPath(arguments.path);
-		if (fileExists(baseDir & ".fixinator.json")) {
+		var baseDir = "";
+		if (len(arguments.path)) {
+			pathData = getFileInfo(arguments.path)
+			baseDir = getDirectoryFromPath(arguments.path);
+		} else {
+			//path empty was from file globber pattern
+			pathData.type = "empty";
+		}
+		if (pathData.type!= "empty" && fileExists(baseDir & ".fixinator.json")) {
 			local.fileConfig = fileRead(getDirectoryFromPath(arguments.path) & ".fixinator.json");
 			if (isJSON(local.fileConfig)) {
 				local.fileConfig = deserializeJSON(local.fileConfig);
@@ -68,18 +75,26 @@ component singleton="true" {
 			if (isFreeAPIKey()) {
 				throw(message="Sorry you can only scan one file at a time using a Free API key. With a purchased key you can scan directories. Visit https://fixinator.app to purchase.", type="FixinatorClient");
 			}
-			files = directoryList(arguments.path, true, "path");
+			if (arrayLen(arguments.paths)) {
+				files=arguments.paths;
+			} else {
+				files = directoryList(arguments.path, true, "path");	
+			}
+			
 			files = filterPaths(arguments.path, files, payload.config);	
 		}
 		local.filesPerBatch = arrayLen(files);
 		local.numberOfBatches = 1;
 
-		if (arrayLen(files) > (variables.maxPayloadFileCount * 20 )) {
+		if (arrayLen(files) > (variables.maxPayloadFileCount * 14 )) {
 			local.numberOfBatches = 4;
-		} else if (arrayLen(files) > (variables.maxPayloadFileCount * 10)) {
+		} else if (arrayLen(files) > (variables.maxPayloadFileCount * 7)) {
 			local.numberOfBatches = 3;
-		} else if (arrayLen(files) > (variables.maxPayloadFileCount * 3)) {
+		} else if (arrayLen(files) > (variables.maxPayloadFileCount * 2)) {
 			local.numberOfBatches = 2;
+		}
+		if (local.numberOfBatches > 1 && !isCloudAPIURL()) {
+			local.numberOfBatches = local.numberOfBatches * 2;
 		}
 		local.filesPerBatch = (arrayLen(files) / local.numberOfBatches) + 1;
 		local.lock_name = createUUID();
@@ -108,8 +123,13 @@ component singleton="true" {
 		if (arrayLen(local.batch.files)) {
 			arrayAppend(local.batches, local.batch);
 		}
+		if (server.keyExists("lucee")) {
+			//run parallel on lucee
+			arrayEach(local.batches, processBatch, true, arrayLen(local.batches));	
+		} else {
+			arrayEach(local.batches, processBatch);	
+		}
 		
-		arrayEach(local.batches, processBatch, true, arrayLen(local.batches));
 		for (local.batch in local.batches) {
 			if (local.batch.keyExists("error")) {
 				if (local.batch.error.keyExists("message")) {
@@ -147,6 +167,7 @@ component singleton="true" {
 			progressBar.update( percent=100, currentCount=arrayLen(files), totalCount=arrayLen(files) );	
 		}
 		results["config"] = payload.config;
+		results["files"] = files;
 		return results;
 	}
 
@@ -298,7 +319,18 @@ component singleton="true" {
 					variables.fixinator_shared[element.lock_name].lastPercentValue = local.percentValue;
 				}
 			}
-			element.progressBar.update( percent=local.percentValue, currentCount=fileCounter, totalCount=totalFileCount);	
+			if (totalFileCount > 20 && local.percentValue != 100 && local.percentValue > local.lastPercentValue) {
+				//step update
+				local.stepPercent = local.lastPercentValue;
+				while (local.stepPercent < local.percentValue) {
+					local.stepPercent++;
+					element.progressBar.update( percent=local.stepPercent, currentCount=fileCounter, totalCount=totalFileCount);
+					sleep(50);
+				}
+			} else {
+				element.progressBar.update( percent=local.percentValue, currentCount=fileCounter, totalCount=totalFileCount);
+			}
+			
 
 		}
 	}
@@ -420,7 +452,7 @@ component singleton="true" {
 	public function filterPaths(baseDirectory, paths, config) {
 		var f = "";
 		var ignoredPaths = ["/.git/","\.git\","/.svn/","\.svn\", ".git/", ".hg/", "/.hg/"];
-		var ignoredExtensions = ["jpg","png","txt","pdf","dat", "doc","docx","gif","css","zip","bak","exe","pack","log","csv","xsl","xslx","psd","ai", "svg", "ttf", "woff", "ttf", "gz", "tar", "7z", "epub", "mobi", "ppt", "pptx"];
+		var ignoredExtensions = ["jpg","png","txt","pdf","dat", "doc","docx","gif","css","zip","bak","exe","pack","log","csv","xsl","xslx","psd","ai", "svg", "ttf", "woff", "ttf", "gz", "tar", "7z", "epub", "mobi", "ppt", "pptx", "swf", "fla", "flv", "m4v","mp3","mp4","DS_Store"];
 		var filteredPaths = [];
 		//always ignore git paths
 		if (arguments.config.keyExists("ignorePaths") && arrayLen(arguments.config.ignorePaths)) {
@@ -451,15 +483,17 @@ component singleton="true" {
 			}
 
 			if (!local.skip) {
-				arrayAppend(filteredPaths, f);
+				arrayAppend(filteredPaths, normalizeSlashes(f));
 			}
 		}
 		return filteredPaths;
 	}
 
-	public function fixCode(basePath, fixes) {
+	public function fixCode(basePath, fixes, writeFiles=true) {
 		var fix = "";
 		var basePathInfo = getFileInfo(arguments.basePath);
+		var results = {"fixes"={}, warnings=[]};
+		var i=0;
 		//sort issues by file first then by position
 		arraySort(
   		  arguments.fixes,
@@ -485,11 +519,14 @@ component singleton="true" {
 
 		local.lastFile = "";
 		local.filePositionOffset = 0;
+		
+		
 		for (fix in arguments.fixes) {
+			i++;
 			if (basePathInfo.type == "file") {
 				local.filePath = arguments.basePath;
 			} else {
-				local.filePath = arguments.basePath & fix.issue.path;
+				local.filePath = normalizeSlashes(arguments.basePath & fix.issue.path);	
 			}
 
 
@@ -510,10 +547,33 @@ component singleton="true" {
 					replaceString="fix"}
 			*/
 			
+			//check fix ranges make sure there is not an overlap
+			local.hasRangeOverlap = false;
+			for (local.f=1;local.f<i;local.f++) {
+				if (fix.issue.path == arguments.fixes[local.f].issue.path) {
+					local.rangeStart = arguments.fixes[local.f].fix.replacePosition;
+					local.rangeEnd = local.rangeStart + len(arguments.fixes[local.f].fix.replaceString);
+					if (fix.fix.replacePosition >= local.rangeStart && fix.fix.replacePosition <= local.rangeEnd) {
+						local.hasRangeOverlap = true;
+						break;
+					}	
+				}
+			}
+			if (local.hasRangeOverlap) {
+				local.msg = "Unable to fix issue ";
+				if (fix.issue.keyExists("title")) {
+					local.msg &= fix.issue.title;
+				}
+				local.msg &= " in " & fix.issue.path & " on line " & fix.issue.line;
+				local.msg &= " because another issue was already fixed in overlapping positions.";
+				arrayAppend(results.warnings, local.msg);
+				continue;
+			}
+
 			local.fixStartPos = local.filePositionOffset + fix.fix.replacePosition;
 			local.fileSnip = mid(local.fileContent, local.fixStartPos, len(fix.fix.replaceString));
 			if (local.fileSnip != fix.fix.replaceString) {
-				throw(message="Snip does not match: |#local.fileSnip#| expected: |#fix.fix.replaceString#| FPO:#local.filePositionOffset# FSP:#local.fixStartPos#  #local.fileContent# ");
+				throw(message="Snip does not match: |#local.fileSnip#| expected: |#fix.fix.replaceString#| FPO:#local.filePositionOffset# FSP:#local.fixStartPos# #local.filePath#:::#local.fileContent# ");
 			} else {
 				local.prefix = mid(local.fileContent, 1, local.fixStartPos-1);
 				local.suffix = mid(local.fileContent, local.fixStartPos + len(local.fix.fix.replaceString), len(fileContent)- local.fixStartPos + len(local.fix.fix.replaceString));
@@ -530,13 +590,18 @@ component singleton="true" {
 					throw(message="rs contains char(13)");
 				}
 
-				fileWrite(local.filePath, local.fileContent);
+				if (arguments.writeFiles) {
+					fileWrite(local.filePath, local.fileContent);
+				} else {
+					results.fixes[local.filePath] = local.fileContent;
+				}
 
 			}
 
 			
 
 		}
+		return results;
 	}
 
 	public function getFixinatorCategories() {
@@ -565,6 +630,18 @@ component singleton="true" {
 
 	public function debugger(string message) {
 		writeLog(text=arguments.message, type="information", file="fixinator-client-debug");
+	}
+
+	/*
+	* Turns all slashes in a path to forward slashes except for \\ in a Windows UNC network share
+	* Also changes double slashes to a single slash
+	*/
+	public function normalizeSlashes( string path ) {
+		if( path.left( 2 ) == '\\' ) {
+			return '\\' & path.replace( '\', '/', 'all' ).right( -2 );
+		} else {
+			return path.replace( '\', '/', 'all' ).replace( '//', '/', 'all' );
+		}
 	}
 
 

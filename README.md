@@ -41,10 +41,17 @@ Writes results to a file specified by the path in resultFile. You may specify a 
 
 Specify a format for the `resultFile`:  `json` (default), `html`, `pdf`, `csv`, `junit`, `sast`, or `findbugs`. You may specify a comma seperated list of formats and `resultFile` paths if you want to write multiple files.
 
-
 ### ignorePaths
 
 A file globber pattern of paths to ignore from the scan.
+
+### failOnIssues
+
+Default: `true` - When true returns an exit code of `1` when issues are found, this will cause your build to fail if you are running in CI. If you do not want the build to fail when issues are found, set this to `false`.
+
+### listScanners
+
+Default: `false` - Prints out a list of scanners supported by the server in the results. Automatically set to `true` when `verbose` is `true`
 
 ## Environment Variables
 
@@ -96,7 +103,8 @@ A `.fixinator.json` configuration file can be placed in the root of a folder to 
 		"ignoreExtensions":["ign","ore"],
 		"ignoreScanners":["xss"],
 		"minSeverity": "low",
-		"minConfidence": "low"
+		"minConfidence": "low",
+		"ignorePatterns": {}
 	}
 
 Note that `.fixinator.json` files placed in a subfolder of the base scan path are currently ignored.
@@ -121,13 +129,23 @@ Default: `low` - The minimum severity level that will be flagged. Set this to `h
 
 Default: `high` - The minimum confidence level that will be flagged. Issues with `low` confidence will be more likely to be false positives.
 
-### failOnIssues
+### ignorePatterns
 
-Default: `true` - When true returns an exit code of `1` when issues are found, this will cause your build to fail if you are running in CI. If you do not want the build to fail when issues are found, set this to `false`.
+Some applications may have their own functions for safely encoding varaibles to prevent Cross Site Scripting (XSS). Suppose you have a `customEncodeHTML()` function that is similar to `encodeForHTML()`, we can tell Fixinator's XSS scanner to ignore variables that have the `customEncodeHTML` function call
 
-### listScanners
+	"ignorePatterns": {
+			"xss": ["customEncodeHTML("]
+	}
 
-Default: `false` - Prints out a list of scanners supported by the server in the results. Automatically set to `true` when `verbose` is `true`
+Now suppose you have an a few application variables that are used in SQL, they are not vulnerable to SQL injection because they are hard coded in the application. We can ignore those by adding some patterns for the `sqlinjection` scanner:
+
+	"ignorePatterns": {
+			"xss": ["customEncodeHTML("],
+			"sqlinjection": ["application.table_prefix", "application.items_per_page"]
+	}
+
+This is a very powerful feature, so make sure you only use it on variables, functions or patterns you know are safe.
+
 
 ## Ignoring issues in code
 
@@ -143,3 +161,5 @@ The comment must be on the same line as the issue, or on the line above the issu
 
 	//ignore:iif - b and a are safe variables because... 
 	x = iif(c, b, a);
+
+Also take a look at the `ignorePatterns` object in the `.fixinator.json` file for another way to ignore code from fixinator.

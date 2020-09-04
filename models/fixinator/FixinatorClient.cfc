@@ -255,7 +255,7 @@ component singleton="true" {
 									payload = {"config"=element.config, "files"=[]};
 								} 
 								local.size+= local.fileInfo.size;
-								payload.files.append({"path":replace(local.f, element.baseDir, ""), "data":(local.ext == "jar") ? "" : fileRead(local.f), "sha1":fileSha1(local.f)});
+								payload.files.append({"path":removeBasePathFromPath(element.baseDir, local.f), "data":(local.ext == "jar") ? "" : fileRead(local.f), "sha1":fileSha1(local.f)});
 							}
 						} else {
 							element.results.warnings.append( { "message":"Missing Read Permission", "path":local.f } );
@@ -452,7 +452,7 @@ component singleton="true" {
 	public function filterPaths(baseDirectory, paths, config) {
 		var f = "";
 		var ignoredPaths = ["/.git/","\.git\","/.svn/","\.svn\", ".git/", ".hg/", "/.hg/"];
-		var ignoredExtensions = ["jpg","png","txt","pdf","dat", "doc","docx","gif","css","zip","bak","exe","pack","log","csv","xsl","xslx","psd","ai", "svg", "ttf", "woff", "ttf", "gz", "tar", "7z", "epub", "mobi", "ppt", "pptx", "swf", "fla", "flv", "m4v","mp3","mp4","DS_Store"];
+		var ignoredExtensions = ["jpg","png","txt","pdf","dat", "doc","docx","gif","css","zip","bak","exe","pack","log","csv","xsl","xslx","psd","ai", "svg", "ttf", "woff", "ttf", "gz", "tar", "7z", "epub", "mobi", "ppt", "pptx", "swf", "fla", "flv", "m4v","mp3","mp4","DS_Store", "dll", "ico", "class"];
 		var filteredPaths = [];
 		//always ignore git paths
 		if (arguments.config.keyExists("ignorePaths") && arrayLen(arguments.config.ignorePaths)) {
@@ -487,6 +487,17 @@ component singleton="true" {
 			}
 		}
 		return filteredPaths;
+	}
+
+	public function removeBasePathFromPath(basePath, path) {
+		arguments.basePath = normalizeSlashes(arguments.basePath);
+		arguments.path = normalizeSlashes(arguments.path);
+		if (findNoCase(arguments.basePath, arguments.path) == 1) {
+			return replaceNoCase(arguments.path, arguments.basePath, "");
+		} else {
+			//basepath not found at beginning of path
+			return arguments.path;
+		}
 	}
 
 	public function fixCode(basePath, fixes, writeFiles=true) {

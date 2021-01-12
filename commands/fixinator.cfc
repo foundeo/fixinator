@@ -463,6 +463,8 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 									toFix.append({"fix":local.i.fixes[local.fix], "issue":local.i});
 								} 
 
+							} else if (arguments.autofix == "auto" || arguments.autofix == "automatic") {
+								toFix.append({"fix":local.i.fixes[1], "issue":local.i});
 							}
 						}
 					} else {

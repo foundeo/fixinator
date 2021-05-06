@@ -1,7 +1,14 @@
 # fixinator-client
 
-[![Build Status](https://foundeo.com/images/fixinator-demo.gif)](https://fixinator.app)
+[![Demo](https://foundeo.com/images/fixinator-demo.gif)](https://fixinator.app)
 
+## Installing Fixinator
+
+If you are familiar with CommandBox simply run the command:
+
+	box install fixinator
+
+Check out the [https://github.com/foundeo/fixinator/wiki/Getting-Started](Getting Started Guide) or the [https://github.com/foundeo/fixinator/wiki](Wiki) for more info.
 
 ## Command Line Arguments
 

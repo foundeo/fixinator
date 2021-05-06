@@ -11,7 +11,7 @@
     },
     "bugs":"https://github.com/foundeo/fixinator/issues",
     "slug":"fixinator",
-    "shortDescription":"A CommandBox comand for scanning CFML code.",
+    "shortDescription":"A CommandBox command for scanning CFML code.",
     "type":"commandbox-modules",
     "keywords":[
         "security",

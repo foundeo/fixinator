@@ -593,13 +593,13 @@ component singleton="true" {
 				local.filePositionOffset += ( len(fix.fix.fixCode) - len(fix.fix.replaceString) );
 
 				//throw(message="FPO:#local.filePositionOffset# FileContent:#local.fileContent#");
-
+				/* these appear to be left over debugging
 				if (fix.fix.replaceString contains chr(13)) {
 					throw(message="rs contains char(13)");
 				}
 				if (fix.fix.replaceString contains chr(10)) {
 					throw(message="rs contains char(13)");
-				}
+				}*/
 
 				if (arguments.writeFiles) {
 					fileWrite(local.filePath, local.fileContent);

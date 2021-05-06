@@ -8,7 +8,7 @@ If you are familiar with CommandBox simply run the command:
 
 	box install fixinator
 
-Check out the [https://github.com/foundeo/fixinator/wiki/Getting-Started](Getting Started Guide) or the [https://github.com/foundeo/fixinator/wiki](Wiki) for more info.
+Check out the [Getting Started Guide](https://github.com/foundeo/fixinator/wiki/Getting-Started) or the [Wiki](https://github.com/foundeo/fixinator/wiki) for more info.
 
 ## Command Line Arguments
 

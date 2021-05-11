@@ -294,11 +294,11 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 				progressBar.clear();
 				job.start("Scanning " & arguments.path);
 				progressBar.update( percent=0 );
-				local.results = fixinatorClient.run(path=arguments.path,config=config, progressBar=progressBar, paths=paths);	
+				local.results = fixinatorClient.run(path=arguments.path, config=config, progressBar=progressBar, paths=paths);	
 				progressBar.clear();
 			} else {
 				//no progress bar or interactive job output
-				local.results = fixinatorClient.run(path=arguments.path,config=config);	
+				local.results = fixinatorClient.run(path=arguments.path, config=config, paths=paths);	
 			}
 			
 

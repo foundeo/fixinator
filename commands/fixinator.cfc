@@ -32,8 +32,24 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 	* @debug.hint Enable debug mode
 	* @listScanners.hint List the types of scanners that are enabled, enabled automatically when verbose=true
 	* @ignorePaths.hint A globber paths pattern to exclude
+	* @ignoreExtensions.hint A list of extensions to exclude
 	**/
-	function run( string path=".", string resultFile, string resultFormat="json", boolean verbose=true, string listBy="type", string severity="default", string confidence="default", string ignoreScanners="", autofix="off", boolean failOnIssues=true, boolean debug=false, boolean listScanners=false, string ignorePaths="")  {
+	function run(
+        string path=".",
+        string resultFile,
+        string resultFormat="json",
+        boolean verbose=true,
+        string listBy="type",
+        string severity="default",
+        string confidence="default",
+        string ignoreScanners="",
+        autofix="off",
+        boolean failOnIssues=true,
+        boolean debug=false,
+        boolean listScanners=false,
+        string ignorePaths="",
+        string ignoreExtensions=""
+    )  {
 		var fileInfo = "";
 		var severityLevel = 1;
 		var confLevel = 1;
@@ -223,6 +239,10 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 
 		if (len(arguments.ignoreScanners)) {
 			config.ignoreScanners = listToArray(replace(arguments.ignoreScanners, " ", "", "ALL"));
+		}
+
+		if (len(arguments.ignoreExtensions)) {
+			config.ignoreExtensions = listToArray(replace(arguments.ignoreExtensions, " ", "", "ALL"));
 		}
 
 

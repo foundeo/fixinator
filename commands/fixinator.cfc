@@ -163,10 +163,23 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 
 
 		if (arguments.path contains "*" || arguments.path contains "," || len(arguments.ignorePaths)) {
-			local.newPath = arguments.path.listMap( (p) => fileSystemUtil.resolvePath( p ) );
+			local.newPath = arguments.path.listMap( (p) => {
+				p = fileSystemUtil.resolvePath( p );
+				if ( directoryExists( p ) ) {
+					return p & "**";
+				}
+				return p;
+			} );
 			local.glob = globber(local.newPath);
 			if ( val(listFirst(shell.getVersion(), ".")) GTE 5 ) {
-				local.glob = local.glob.setExcludePattern(arguments.ignorePaths);
+				local.ignorePathPatterns = arguments.ignorePaths.listMap( ( p ) => {
+					p = fileSystemUtil.resolvePath( p );
+					if ( directoryExists( p ) ) {
+						return p & "**";
+					}
+					return p;
+				} );
+				local.glob = local.glob.setExcludePattern(local.ignorePathPatterns);
 			} else if (len(arguments.ignorePaths)) {
 				error("You specified ignorePaths, but you are using an old version of CommandBox: #shell.getVersion()#. Upgrade to the latest version >=5");
 			}
@@ -448,15 +461,15 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 								print.toConsole();
 								/*
 								local.fix = multiselect()
-								    .setQuestion( 'Do you want to fix this?' )
-    								.setOptions( listAppend(local.fixOptions, "skip") )
-    								.ask();
-    							*/
-    							local.fixOptions = "1-#arrayLen(local.i.fixes)#";
-    							if (arrayLen(local.i.fixes) == 1) {
-    								local.fixOptions = "1";
-    							}
-    							local.fix = ask(message="Do you want to fix this? Enter [#local.fixOptions#] or no: ");
+									.setQuestion( 'Do you want to fix this?' )
+									.setOptions( listAppend(local.fixOptions, "skip") )
+									.ask();
+								*/
+								local.fixOptions = "1-#arrayLen(local.i.fixes)#";
+								if (arrayLen(local.i.fixes) == 1) {
+									local.fixOptions = "1";
+								}
+								local.fix = ask(message="Do you want to fix this? Enter [#local.fixOptions#] or no: ");
 
 
 								if (isNumeric(local.fix) && local.fix >= 1 && local.fix <= arrayLen(local.i.fixes)) {

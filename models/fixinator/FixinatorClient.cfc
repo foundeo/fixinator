@@ -303,7 +303,11 @@ component singleton="true" {
 			
 			local.progress = fileCounter;
 			local.progress -= (pendingCounter/2);
-			local.percentValue = int( (local.progress/totalFileCount) * 100);
+			if( totalFileCount > 0 ){
+				local.percentValue = int( (local.progress/totalFileCount) * 100);
+			} else {
+				local.percentValue = 100;
+			}
 			local.upperBound = int( (fileCounter/totalFileCount) * 100 ) - 2;
 			if (pendingCounter > 0) {
 				if (local.percentValue <= local.upperBound && local.lastPercentValue <= local.upperBound) {

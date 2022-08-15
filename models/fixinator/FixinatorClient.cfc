@@ -232,8 +232,10 @@ component singleton="true" {
 						if (local.fileInfo.canRead && local.fileInfo.type == "file") {
 							local.ext = listLast(local.f, ".");
 							if (local.fileInfo.size > variables.maxPayloadSize && local.ext != "jar") {
-								element.results.warnings.append( { "message":"File was too large, #local.fileInfo.size# bytes, max: #variables.maxPayloadSize#", "path":local.f } );
+								element.results.warnings.append( { "message":"Skipped File: too large, #local.fileInfo.size# bytes, max: #variables.maxPayloadSize#", "path":local.f } );
 								continue;
+							} else if ( removeBasePathFromPath(element.baseDir, local.f) contains ".." ) {
+								element.results.warnings.append( { "message":"Skipped File: name contains .. ", "path":local.f } );
 							} else {
 								
 								if (local.size + local.fileInfo.size > variables.maxPayloadSize || arrayLen(payload.files) > variables.maxPayloadFileCount) {
@@ -303,8 +305,14 @@ component singleton="true" {
 			
 			local.progress = fileCounter;
 			local.progress -= (pendingCounter/2);
-			local.percentValue = int( (local.progress/totalFileCount) * 100);
-			local.upperBound = int( (fileCounter/totalFileCount) * 100 ) - 2;
+			if (totalFileCount > 0) {
+				local.percentValue = int( (local.progress/totalFileCount) * 100);
+				local.upperBound = int( (fileCounter/totalFileCount) * 100 ) - 2;
+			} else {
+				local.percentValue = 100;
+				local.upperBound = 100;
+			}
+			
 			if (pendingCounter > 0) {
 				if (local.percentValue <= local.upperBound && local.lastPercentValue <= local.upperBound) {
 					//increment counter while waiting for HTTP response
@@ -366,11 +374,17 @@ component singleton="true" {
 		}
 		if (httpResult.statusCode contains "403") {
 			//FORBIDDEN -- API KEY ISSUE
-			if (getAPIKey() == "UNDEFINED") {
-				throw(message="Fixinator API Key must be defined in an environment variable called FIXINATOR_API_KEY", detail="If you have already set the environment variable you may need to reopen your terminal or command prompt window. Please visit https://fixinator.app/ for more information", type="FixinatorClient");
+			if (isCloudAPIURL()) {
+				if (getAPIKey() == "UNDEFINED") {
+					throw(message="Fixinator API Key must be defined in an environment variable called FIXINATOR_API_KEY", detail="If you have already set the environment variable you may need to reopen your terminal or command prompt window. Please visit https://fixinator.app/ for more information", type="FixinatorClient");
+				} else {
+					throw(message="Fixinator API Key (#getAPIKey()#) is invalid, disabled or over the API request limit. Please contact Foundeo Inc. for assistance. Please provide your API key in correspondance. https://foundeo.com/contact/ ", detail="#httpResult.statusCode# #httpResult.fileContent#", type="FixinatorClient");
+				}
 			} else {
-				throw(message="Fixinator API Key (#getAPIKey()#) is invalid, disabled or over the API request limit. Please contact Foundeo Inc. for assistance. Please provide your API key in correspondance. https://foundeo.com/contact/ ", detail="#httpResult.statusCode# #httpResult.fileContent#", type="FixinatorClient");
+				//is enterprise api
+				throw(message="Fixinator API #getAPIURL()# returned 403 Error. API Key: #getAPIKey()# If your Fixinator Enterprise Server has specified FIXINATOR_API_KEY environment variable, then your API key must match that value on the server. Please contact Foundeo Inc. for assistance. https://foundeo.com/contact/ ", detail="#httpResult.statusCode# #httpResult.fileContent#", type="FixinatorClient");
 			}
+			
 		} else if (httpResult.statusCode contains "429") { 
 			//TOO MANY REQUESTS
 			if (arguments.isRetry == 1) {
@@ -383,7 +397,10 @@ component singleton="true" {
 		} else if (httpResult.statusCode contains "502" || httpResult.statusCode contains "504") { 
 			//502 BAD GATEWAY or 504 Gateway Timeout - lambda timeout issue
 			if (arguments.isRetry >= 2) {
-				throw(message="Fixinator API Returned #httpResult.statusCode# Status Code. Please try again shortly or contact Foundeo Inc. if the problem persists.", type="FixinatorClient");
+				local.payloadPaths = arrayMap(arguments.payload.files, function(item) {
+					return item.path;
+				});
+				throw(message="Fixinator API Returned #httpResult.statusCode# Status Code. Please try again shortly or contact Foundeo Inc. if the problem persists.", detail="Paths: #serializeJSON(local.payloadPaths)#", type="FixinatorClient");
 			} else {
 				//retry it
 				sleep(500);

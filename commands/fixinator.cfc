@@ -33,6 +33,8 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 	* @listScanners.hint List the types of scanners that are enabled, enabled automatically when verbose=true
 	* @ignorePaths.hint A globber paths pattern to exclude
 	* @ignoreExtensions.hint A list of extensions to exclude
+	* @gitLastCommit.hint Scan only files changed in the last git commit
+	* @gitWorkingCopy.hint Scan only files changed since the last commit in the working copy
 	**/
 	function run(
         string path=".",
@@ -48,7 +50,9 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
         boolean debug=false,
         boolean listScanners=false,
         string ignorePaths="",
-        string ignoreExtensions=""
+        string ignoreExtensions="",
+		boolean gitLastCommit=false,
+		boolean gitChanged=false,
     )  {
 		var fileInfo = "";
 		var severityLevel = 1;
@@ -177,8 +181,54 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 			print.greenLine("✓ DEBUG MODE ENABLED: #fixinatorClient.isDebugModeEnabled()#");
 		}
 
-
-		if (arguments.path contains "*" || arguments.path contains "," || len(arguments.ignorePaths)) {
+		
+		if (arguments.gitLastCommit || arguments.gitChanged) {
+			//we are going to use git data to build file list
+			if (arguments.gitLastCommit && arguments.gitChanged) {
+				//this might be handy to enable 
+				error("You cannot enable both gitLastCommit and gitChanged at the same time");
+			}
+			try {
+				if (arguments.gitLastCommit && arguments.verbose) {
+					print.yellowLine("Scanning only files changed in the last git commit.");
+				} else {
+					print.yellowLine("Scanning only files changed since the last git commit.");
+				}
+				arguments.path = fileSystemUtil.resolvePath( arguments.path );
+				local.gitChanges = getGitChanges(path=arguments.path, lastCommit=arguments.gitLastCommit);
+				for (local.change in local.gitChanges) {
+					if (change.type == "DELETE") {
+						if (arguments.verbose) {
+							print.redLine("  D: #change.previousPath#");
+						}
+					} else if (change.type == "MODIFY") {
+						if (arguments.verbose) {
+							print.greenLine("  M: #change.path#");
+						}
+						arrayAppend(paths, getDirectoryFromPath(arguments.path) & change.path);
+					} else if (change.type == "ADD") {
+							if (arguments.verbose) {
+								print.greenLine("  A: #change.path#");
+							}
+							arrayAppend(paths, getDirectoryFromPath(arguments.path) & change.path);
+					} else {
+						if (arguments.verbose) {
+							print.yellowLine("  #change.type#: #change.path# #change.previousPath#");
+						}
+						arrayAppend(paths, getDirectoryFromPath(arguments.path) & change.path);
+					}
+				}
+				
+				if (arrayLen(paths) == 0) {
+					print.redLine("No scannable paths found.");
+					return;
+				} else if (len(arguments.ignorePaths)) {
+					error("Sorry ignorePaths is not currently supported with gitLastCommit or gitChanged");
+				}
+			} catch (any err) {
+				error("Error checking for git files, make sure this is a git repository and path is pointing to the root of it: #err.message# - #err.detail# -- #err.stacktrace#")
+			}			
+		} else if (arguments.path contains "*" || arguments.path contains "," || len(arguments.ignorePaths)) {
 			local.newPath = arguments.path.listMap( (p) => {
 				p = fileSystemUtil.resolvePath( p );
 				if ( directoryExists( p ) ) {
@@ -226,6 +276,7 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 			arguments.path = fileSystemUtil.resolvePath( arguments.path );
 		}
 
+		
 		
 		
 
@@ -336,6 +387,7 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 				if (structKeyExists(err, "detail")) {
 					print.whiteLine(err.detail);	
 				}
+				error("Fixinator Exiting Due to Error");
 				return;
 			} else {
 				rethrow;
@@ -544,7 +596,13 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 				print.line();
 				print.boldOrangeLine("WARNINGS");
 				for (local.w in local.results.warnings) {
-					print.grayLine(serializeJSON(local.w));
+					if (local.w.keyExists("message") && local.w.keyExists("path")) {
+						print.grayLine(local.w.message);
+						print.grayLine("  " & replaceNoCase(local.w.path, getDirectoryFromPath(arguments.path), ""));
+					} else {
+						print.grayLine(serializeJSON(local.w));
+					}
+					
 				}
 			}
 
@@ -636,6 +694,55 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 	private boolean function isJenkins() {
 		var env = server.system.environment;
 		return env.keyExists("BUILD_NUMBER") && len(env.BUILD_NUMBER) && env.keyExists("JENKINS_HOME") && len(env.JENKINS_HOME);
+	}
+
+	private function getGitChanges(path, lastCommit=true) {
+		var gitDir = path & ".git/";
+		var gitDirFileObject = createObject("java", "java.io.File").init(gitDir);
+		var gitRepo = "";
+		var reader = "";
+		var results = [];
+		var result = "";
+		var disIO = createObject("java", "org.eclipse.jgit.util.io.DisabledOutputStream").INSTANCE;
+		if (!gitDirFileObject.exists()) {
+			throw(message="The path: #path# is not a git repository root path");
+		}
+		gitRepo = createObject("java", "org.eclipse.jgit.storage.file.FileRepositoryBuilder").create(gitDirFileObject);
+
+		reader = gitRepo.newObjectReader();
+
+		if (lastCommit) {
+			oldTreeIter = createObject("java", "org.eclipse.jgit.treewalk.CanonicalTreeParser");
+			oldTree = gitRepo.resolve( "HEAD~1^{tree}" );
+			oldTreeIter.reset( reader, oldTree );
+			newTreeIter = createObject("java", "org.eclipse.jgit.treewalk.CanonicalTreeParser");
+			
+			newTree = gitRepo.resolve( "HEAD^{tree}" );
+			newTreeIter.reset( reader, newTree );
+		} else {
+			oldTreeIter = createObject("java", "org.eclipse.jgit.treewalk.CanonicalTreeParser");
+			oldTree = gitRepo.resolve( "HEAD^{tree}" );
+			oldTreeIter.reset( reader, oldTree );
+			
+			newTreeIter = createObject("java", "org.eclipse.jgit.treewalk.FileTreeIterator").init(gitRepo);
+		}
+		
+
+		diffFormatter = createObject("java", "org.eclipse.jgit.diff.DiffFormatter").init( disIO );
+		diffFormatter.setRepository( gitRepo );
+		entries = diffFormatter.scan( oldTreeIter, newTreeIter );
+
+		for( entry in entries.toArray() ) {
+			result = {"type": entry.getChangeType().toString(), "path": "", "previousPath":""}
+			if (!isNull(entry.getNewPath())) {
+				result.path = entry.getNewPath().toString();
+			}
+			if (!isNull(entry.getOldPath())) {
+				result.previousPath = entry.getOldPath().toString();
+			}
+			arrayAppend(results, result);
+		}
+		return results;
 	}
 
 }

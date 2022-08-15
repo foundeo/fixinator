@@ -60,6 +60,14 @@ Default: `true` - When true returns an exit code of `1` when issues are found, t
 
 Default: `false` - Prints out a list of scanners supported by the server in the results. Automatically set to `true` when `verbose` is `true`
 
+### gitLastCommit
+
+Default: `false` - When `true` scans only files changed in the HEAD git commit, this is useful in CI to scan only the files changed in a specific commit. 
+
+### gitWorkingCopy
+
+Default: `false` - When `true` scans only the files changed in the working copy (compared to the HEAD git commit). This is useful to scan only the files you have modified since your last git commit. 
+
 ## Environment Variables
 
 The following environment variables are used by fixinator:

@@ -1,0 +1,35 @@
+name: Publish
+
+on:
+  push:
+    # Publish `v1.2.3` tags as releases.
+    tags:
+      - v*
+
+  
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/foundeo/cfml-ci-tools/cfml-ci-tools:latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set Version
+        run: |
+          # Strip git ref prefix from version
+          VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
+          # Strip "v" prefix from tag name
+          [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
+          # Use Docker `latest` tag convention
+          [ "$VERSION" == "master" ] && VERSION=latest
+          
+          echo $VERSION
+          
+          box bump version=$VERSION
+          
+          cat box.json
+          
+          echo $VERSION > ./version.txt
+        env:
+          BOX_CONFIG_ENDPOINTS_FORGEBOX_APITOKEN: ${{ secrets.BOX_CONFIG_ENDPOINTS_FORGEBOX_APITOKEN }}

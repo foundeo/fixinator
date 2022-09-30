@@ -394,8 +394,8 @@ component singleton="true" {
 				sleep(500);
 				return sendPayload(payload=arguments.payload, isRetry=1);
 			}
-		} else if (httpResult.statusCode contains "502" || httpResult.statusCode contains "504") { 
-			//502 BAD GATEWAY or 504 Gateway Timeout - lambda timeout issue
+		} else if (httpResult.statusCode contains "502" || httpResult.statusCode contains "504" || httpResult.statusCode contains "408") { 
+			//502 BAD GATEWAY, 504 Gateway Timeout - lambda timeout issue, or 408 Request Time-out
 			if (arguments.isRetry >= 2) {
 				local.payloadPaths = arrayMap(arguments.payload.files, function(item) {
 					return item.path;
@@ -414,7 +414,7 @@ component singleton="true" {
 					local.div = int( arrayLen(arguments.payload.files) / 2 );
 
 					for (local.p = 1;local.p<=arrayLen(arguments.payload.files);local.p++) {
-						if (local.p < local.div) {
+						if (local.p <= local.div) {
 							arrayAppend(local.payloadA.files, arguments.payload.files[local.p]);
 						} else {
 							arrayAppend(local.payloadB.files, arguments.payload.files[local.p]);

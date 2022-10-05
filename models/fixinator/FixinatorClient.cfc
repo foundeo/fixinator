@@ -468,7 +468,7 @@ component singleton="true" {
 
 	public function filterPaths(baseDirectory, paths, config) {
 		var f = "";
-		var ignoredPaths = ["/.git/","\.git\","/.svn/","\.svn\", ".git/", ".hg/", "/.hg/"];
+		var ignoredPaths = [".git/",".git\",".svn/",".svn\",".hg/",".hg\"];
 		var ignoredExtensions = ["jpg","png","txt","pdf","dat", "doc","docx","gif","css","zip","bak","exe","pack","log","csv","xsl","xslx","psd","ai", "svg", "ttf", "woff", "ttf", "gz", "tar", "7z", "epub", "mobi", "ppt", "pptx", "swf", "fla", "flv", "m4v","mp3","mp4","DS_Store", "dll", "ico", "class"];
 		var filteredPaths = [];
 		//always ignore git paths

@@ -1,8 +1,8 @@
 {
     "name":"fixinator",
-    "version":"3.0.0",
+    "version":"3.0.1",
     "author":"Foundeo Inc.",
-    "location":"foundeo/fixinator#v3.0.0",
+    "location":"foundeo/fixinator#v3.0.1",
     "homepage":"https://fixinator.app/",
     "documentation":"https://github.com/foundeo/fixinator/wiki",
     "repository":{
@@ -11,7 +11,7 @@
     },
     "bugs":"https://github.com/foundeo/fixinator/issues",
     "slug":"fixinator",
-    "shortDescription":"A CommandBox command for scanning CFML code.",
+    "shortDescription":"A CommandBox command for scanning CFML code to find security issues.",
     "type":"commandbox-modules",
     "keywords":[
         "security",

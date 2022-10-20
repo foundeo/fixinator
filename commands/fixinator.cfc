@@ -179,6 +179,7 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 		if (arguments.debug) {
 			fixinatorClient.setDebugMode(true);
 			print.greenLine("✓ DEBUG MODE ENABLED: #fixinatorClient.isDebugModeEnabled()#");
+			print.greenLine("   ↳ #expandPath("{lucee-web}/logs/fixinator-client-debug.log")#");
 		}
 
 		
@@ -363,7 +364,13 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 				//show progress bars
 				print.line().toConsole();
 				progressBar.clear();
-				job.start("Scanning " & arguments.path);
+				//job.start("Scanning " & arguments.path);
+				print.greenLine("Scanning " & arguments.path);
+				if (arguments.debug && arrayLen(paths)) {
+					for (local.p in paths) {
+						print.greenLine(" " & local.p);
+					}
+				}
 				progressBar.update( percent=0 );
 				local.results = fixinatorClient.run(path=arguments.path, config=config, progressBar=progressBar, paths=paths);	
 				progressBar.clear();
@@ -395,7 +402,7 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 		} finally {
 			if (arguments.verbose) {
 				progressBar.clear();
-				job.complete();	
+				//job.complete( dumpLog=true );	
 			}
 		}
 		

@@ -531,10 +531,14 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 							print.greyLine("Possible Fixes:");
 							local.fixIndex = 0;
 							local.fixOptions = "";
+							local.queryparamFix = 0;
 							for (local.fix in local.i.fixes) {
 								local.fixIndex++;
 								local.fixOptions = listAppend(local.fixOptions, local.fixIndex);
 								print.greyLine("        "&local.fixIndex&") "&local.fix.title & ": " & trim(local.fix.fixCode) );
+								if ( findNoCase('cfsqltype="cf_sql_varchar"', local.fix.fixCode) ) {
+									local.queryparamFix = local.fixIndex;
+								}
 							}
 							if (arguments.autofix == "prompt") {
 								print.toConsole();
@@ -548,12 +552,25 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 								if (arrayLen(local.i.fixes) == 1) {
 									local.fixOptions = "1";
 								}
-								local.fix = ask(message="Do you want to fix this? Enter [#local.fixOptions#] or no: ");
+
+								if (local.queryparamFix == 0) {
+									local.fix = ask(message="Do you want to fix this? Enter [#local.fixOptions#] or no: ");
+								} else {
+									local.fix = ask(message="Do you want to fix this? Enter [#local.fixOptions#] or cf_sql_whatever or no: ");
+								}
+
+								
 
 
 								if (isNumeric(local.fix) && local.fix >= 1 && local.fix <= arrayLen(local.i.fixes)) {
 									toFix.append({"fix":local.i.fixes[local.fix], "issue":local.i});
-								} 
+								} else if (len(local.fix) && !isNumeric(local.fix) && local.queryparamFix != 0 && !isBoolean(local.fix)) {
+									//fixing with a custom cfsqltype
+									local.customFix = duplicate( local.i.fixes[local.queryparamFix] );
+									local.customFix.fixCode = replaceNoCase(local.customFix.fixCode, 'cfsqltype="cf_sql_varchar"', 'cfsqltype="#local.fix#"');
+									arrayAppend(local.i.fixes, local.customFix);
+									toFix.append({"fix":local.customFix, "issue":local.i});
+								}
 
 							} else if (arguments.autofix == "auto" || arguments.autofix == "automatic") {
 								toFix.append({"fix":local.i.fixes[1], "issue":local.i});

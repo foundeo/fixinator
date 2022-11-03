@@ -33,6 +33,8 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 	* @listScanners.hint List the types of scanners that are enabled, enabled automatically when verbose=true
 	* @ignorePaths.hint A globber paths pattern to exclude
 	* @ignoreExtensions.hint A list of extensions to exclude
+	* @configFile.hint The full path to a .fixinator.json formatted file to use as configuration
+	* @requestTimeout.hint The amount of time in seconds that this command will wait for a response from the server
 	* @gitLastCommit.hint Scan only files changed in the last git commit
 	* @gitWorkingCopy.hint Scan only files changed since the last commit in the working copy
 	**/
@@ -51,13 +53,18 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
         boolean listScanners=false,
         string ignorePaths="",
         string ignoreExtensions="",
+        string configFile="",
+		numeric requestTimeout=35,
 		boolean gitLastCommit=false,
 		boolean gitChanged=false,
     )  {
 		var fileInfo = "";
 		var severityLevel = 1;
 		var confLevel = 1;
-		var config = {};
+		var config = {
+			"configFile": configFile,
+			"requestTimeout": requestTimeout
+		};
 		var toFix = [];
 		var paths = [];
 		if (arguments.verbose) {

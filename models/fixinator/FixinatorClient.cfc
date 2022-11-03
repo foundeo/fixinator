@@ -55,7 +55,17 @@ component singleton="true" {
 			//path empty was from file globber pattern
 			pathData.type = "empty";
 		}
-		if (pathData.type!= "empty" && fileExists(baseDir & ".fixinator.json")) {
+
+		if( config.configFile != "" ){
+			local.fileConfig = fileRead(config.configFile);
+			if (isJSON(local.fileConfig)) {
+				local.fileConfig = deserializeJSON(local.fileConfig);
+				structAppend(payload.config, local.fileConfig, true);
+			} else {
+				throw(message="Invalid .fixinator.json config file, was not valid JSON");
+			}
+		}
+		else if (pathData.type!= "empty" && fileExists(baseDir & ".fixinator.json")) {
 			local.fileConfig = fileRead(getDirectoryFromPath(arguments.path) & ".fixinator.json");
 			if (isJSON(local.fileConfig)) {
 				local.fileConfig = deserializeJSON(local.fileConfig);
@@ -362,7 +372,7 @@ component singleton="true" {
 			debugger("Payload Paths #local.payloadID#: #serializeJSON(local.payloadPaths)#");
 			local.tick = getTickCount();
 		} 
-		cfhttp(url=getAPIURL(), method="POST", result="httpResult", timeout="35") {
+		cfhttp(url=getAPIURL(), method="POST", result="httpResult", timeout=arguments.payload.config.requestTimeout) {
 			cfhttpparam(type="header", name="Content-Type", value="application/json");
 			cfhttpparam(type="header", name="x-api-key", value=getAPIKey());
 			cfhttpparam(type="header", name="X-Client-Version", value=getClientVersion());
@@ -643,6 +653,8 @@ component singleton="true" {
 
 	public struct function getDefaultConfig() {
 		return {
+			"configPath": "",
+			"requestTimeout": 35,
 			"ignorePaths":[],
 			"ignoreExtensions":[],
 			"ignoreScanners":[],

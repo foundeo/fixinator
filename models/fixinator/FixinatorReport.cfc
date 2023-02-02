@@ -331,12 +331,12 @@
 
 	<cffunction name="generateSASTReport" returntype="string" output="false">
 		<cfargument name="data">
-		<cfset var sast = {"version"="2.0", "vulnerabilities"=[]}>
+		<cfset var sast = {"version"="14.0.4", "vulnerabilities"=[]}>
 		<cfset var i = "">
 		<cfset var v = "">
 		<!--- docs: https://gitlab.com/help/user/application_security/sast/index#reports-json-format --->
 		<cfloop array="#arguments.data.results#" index="i">
-			<cfset v = {"category"="sast", "name"="", "message"="", "description"="", "severity"="Unknown", "confidence"="Unknown", "scanner"={"id"="", "name"=""}, "location"={}, "identifiers"=[]}>
+			<cfset v = {"id"="", "category"="sast", "name"="", "message"="", "description"="", "severity"="Unknown", "confidence"="Unknown", "scanner"={"id"="", "name"=""}, "location"={}, "identifiers"=[]}>
 			<cfif i.keyExists("title")>
 				<cfset v.name = i.title>
 			</cfif>
@@ -386,11 +386,11 @@
 			<cfif i.keyExists("function") AND len(i.function)>
 				<cfset v.location["method"] = i.function>
 			</cfif>
-			<cfif i.keyExists("line")>
-				<cfset v.location["start_line"] = i.line>
-				<cfset v.location["end_line"] = i.line>
+			<cfif i.keyExists("line") AND isValid("integer", i.line)>
+				<cfset v.location["start_line"] = javaCast("int", i.line)>
+				<cfset v.location["end_line"] = javaCast("int", i.line)>
 			<cfelse>
-				<cfset v.location["end_line"] = 0>
+				<cfset v.location["start_line"] = javaCast("int", 1)>
 			</cfif>
 			<cfset local.cveRaw = "#v.location.file#:#v.location.start_line#">
 			<cfif i.keyExists("column")>
@@ -400,6 +400,7 @@
 				<cfset local.cveRaw &= ":#i.context#">
 			</cfif>
 			<cfset v["cve"] = hash(local.cveRaw, "SHA-256") & ":" & v.scanner.id>
+			<cfset v["id"] = hash(v.cve, "SHA-256")>
 			<cfset v.location["dependency"] = {}>
 			<cfset arrayAppend(v.identifiers, {"type"="fixinator_scanner_id", "name"="Fixinator Scanner ID: #i.id#", "value"=i.id, "url"="https://fixinator.app/"})>
 			<cfif i.keyExists("link") AND len(i.link)>

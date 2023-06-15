@@ -16,6 +16,11 @@ component singleton="true" {
 		variables.apiURL = trim(variables.system.getenv("FIXINATOR_API_URL"));
 	}
 
+	variables.apiTimeout = 35;
+	if (!isNull(variables.system.getenv("FIXINATOR_API_TIMEOUT"))) {
+		variables.apiTimeout = trim(variables.system.getenv("FIXINATOR_API_TIMEOUT"));
+	}
+
 	variables.clientUpdate = false;
 	variables.debugMode = false;
 	
@@ -183,6 +188,18 @@ component singleton="true" {
 		variables.apiURL = arguments.apiURL;
 	}
 
+	public function getAPITimeout() {
+		return variables.apiTimeout;
+	}
+
+	public function setAPITimeout(numeric apiTimeout) {
+		variables.apiTimeout = arguments.apiTimeout;
+	}
+
+	public function getLockTimeout() {
+		return getAPITimeout() + 1;
+	}
+
 	public function setMaxPayloadSize(numeric size) {
 		variables.maxPayloadSize = arguments.size;
 	}
@@ -197,7 +214,7 @@ component singleton="true" {
 			//progress bar worker
 			for (local.i=0;i<1000;i++) {
 				updateProgressBar(element);
-				cflock(name=element.lock_name, type="readonly", timeout="30") {
+				cflock(name=element.lock_name, type="readonly", timeout=getLockTimeout()) {
 					if (variables.fixinator_shared[element.lock_name].error != 0) {
 						//thread errored out
 						return;
@@ -220,7 +237,7 @@ component singleton="true" {
 				local.payload = {"config"=element.config, "files"=[], "categories":element.categories};
 
 				for (local.f in element.files) {
-					cflock(name=element.lock_name, type="exclusive", timeout="30") {
+					cflock(name=element.lock_name, type="exclusive", timeout=getLockTimeout()) {
 						variables.fixinator_shared[element.lock_name].fileCounter++;	
 						if (variables.fixinator_shared[element.lock_name].error != 0) {
 							//another thread errored out so quit
@@ -239,12 +256,12 @@ component singleton="true" {
 							} else {
 								
 								if (local.size + local.fileInfo.size > variables.maxPayloadSize || arrayLen(payload.files) > variables.maxPayloadFileCount) {
-									cflock(name=element.lock_name, type="exclusive", timeout="30") {
+									cflock(name=element.lock_name, type="exclusive", timeout=getLockTimeout()) {
 										variables.fixinator_shared[element.lock_name].pendingCounter+=arrayLen(payload.files);	
 									}
 									local.result = sendPayload(payload);
 
-									cflock(name=element.lock_name, type="exclusive", timeout="30") {
+									cflock(name=element.lock_name, type="exclusive", timeout=getLockTimeout()) {
 										variables.fixinator_shared[element.lock_name].pendingCounter-=arrayLen(payload.files);	
 									}
 									arrayAppend(element.results.results, local.result.results, true);
@@ -266,11 +283,11 @@ component singleton="true" {
 					}
 				}
 				if (arrayLen(payload.files)) {
-					cflock(name=element.lock_name, type="exclusive", timeout="30") {
+					cflock(name=element.lock_name, type="exclusive", timeout=getLockTimeout()) {
 						variables.fixinator_shared[element.lock_name].pendingCounter+=arrayLen(payload.files);	
 					}
 					local.result = sendPayload(payload);
-					cflock(name=element.lock_name, type="exclusive", timeout="30") {
+					cflock(name=element.lock_name, type="exclusive", timeout=getLockTimeout()) {
 						variables.fixinator_shared[element.lock_name].pendingCounter-=arrayLen(payload.files);	
 					}
 					payload.result = local.result;
@@ -283,7 +300,7 @@ component singleton="true" {
 
 			} catch (any e) {
 				element.error = e;
-				cflock(name=element.lock_name, type="exclusive", timeout="30") {
+				cflock(name=element.lock_name, type="exclusive", timeout=getLockTimeout()) {
 					variables.fixinator_shared[element.lock_name].error+=1;
 				}
 			}
@@ -296,7 +313,7 @@ component singleton="true" {
 			local.fileCounter = 0;
 			local.pendingCounter = 0;
 			local.totalFileCount = 0;
-			cflock(name=element.lock_name, type="readonly", timeout="30") {
+			cflock(name=element.lock_name, type="readonly", timeout=getLockTimeout()) {
 				local.lastPercentValue = variables.fixinator_shared[element.lock_name].lastPercentValue;
 				local.fileCounter = variables.fixinator_shared[element.lock_name].fileCounter;
 				local.pendingCounter = variables.fixinator_shared[element.lock_name].pendingCounter;
@@ -323,7 +340,7 @@ component singleton="true" {
 			}
 			
 			if (local.lastPercentValue != local.percentValue) {
-				cflock(name=element.lock_name, type="exclusive", timeout="30") {
+				cflock(name=element.lock_name, type="exclusive", timeout=getLockTimeout()) {
 					variables.fixinator_shared[element.lock_name].lastPercentValue = local.percentValue;
 				}
 			}
@@ -362,7 +379,7 @@ component singleton="true" {
 			debugger("Payload Paths #local.payloadID#: #serializeJSON(local.payloadPaths)#");
 			local.tick = getTickCount();
 		} 
-		cfhttp(url=getAPIURL(), method="POST", result="httpResult", timeout="35") {
+		cfhttp(url=getAPIURL(), method="POST", result="httpResult", timeout=getAPITimeout()) {
 			cfhttpparam(type="header", name="Content-Type", value="application/json");
 			cfhttpparam(type="header", name="x-api-key", value=getAPIKey());
 			cfhttpparam(type="header", name="X-Client-Version", value=getClientVersion());

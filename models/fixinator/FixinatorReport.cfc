@@ -12,6 +12,10 @@
 		<cfargument name="resultFile" default="">
 		<cfargument name="data">
 		<cfargument name="listBy" type="string" default="type">
+		<cfargument name="fixinatorClientVersion" type="string" default="0.0.0">
+		<cfset var utc_now = dateConvert("local2utc", now())>
+		<cfset arguments.data["timestamp"] = dateFormat(utc_now, "yyyy-mm-dd") & "T" & timeFormat(utc_now, "HH:mm:ss") & "Z">
+		<cfset arguments.data["fixinator_client_version"] = arguments.fixinatorClientVersion>
 		<!--- make sure user is not passing a directory --->
 		<cfif directoryExists(arguments.resultFile)>
 			<cfthrow message="Please specify a file name in resultFile, not a directory.">
@@ -331,9 +335,18 @@
 
 	<cffunction name="generateSASTReport" returntype="string" output="false">
 		<cfargument name="data">
-		<cfset var sast = {"version"="14.0.4", "vulnerabilities"=[]}>
+		<cfset var sast = {"version"="15.0.6", "vulnerabilities"=[], "scan"={}}>
 		<cfset var i = "">
 		<cfset var v = "">
+		<cfset sast.scan["analyzer"] = {"id"="fixinator","name"="Fixinator", "version"=data.fixinator_client_version, "vendor"={"name":"Foundeo Inc."}}>
+		<cfset sast.scan["end_time"] = replace(arguments.data.timestamp, "Z", "")>
+		<cfset sast.scan["start_time"] = replace(arguments.data.timestamp, "Z", "")>
+		<cfset sast.scan["scanner"] = sast.scan["analyzer"]>
+		<cfset sast.scan["status"] = "success">
+		<cfset sast.scan["type"] = "sast">
+		<cfif arrayLen(arguments.data.results)>
+			<cfset sast.scan["status"] = "failure">
+		</cfif>
 		<!--- docs: https://gitlab.com/help/user/application_security/sast/index#reports-json-format --->
 		<cfloop array="#arguments.data.results#" index="i">
 			<cfset v = {"id"="", "category"="sast", "name"="", "message"="", "description"="", "severity"="Unknown", "confidence"="Unknown", "scanner"={"id"="", "name"=""}, "location"={}, "identifiers"=[]}>

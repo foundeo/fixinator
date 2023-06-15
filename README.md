@@ -109,6 +109,17 @@ You can also set this value by running:
 
 This variable should only be used with the enterprise edition otherwise you may run into issues.
 
+### FIXINATOR_API_TIMEOUT `ENTERPRISE EDITION`
+
+The `FIXINATOR_API_TIMEOUT` environment variables specifies the http timeout for connecting to the
+fixinator api server.
+
+You can also set this value by running:
+
+	box config set modules.fixinator.api_timeout=35
+
+This variable should only be used with the enterprise edition.
+
 ## .fixinator.json
 
 A `.fixinator.json` configuration file can be placed in the root of a folder to be scanned. For Example:

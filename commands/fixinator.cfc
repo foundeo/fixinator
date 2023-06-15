@@ -172,6 +172,10 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 			fixinatorClient.setMaxPayloadFileCount(configService.getSetting("modules.fixinator.max_payload_file_count", "UNDEFINED"));
 		}
 
+		if (configService.getSetting("modules.fixinator.api_timeout", "UNDEFINED") != "UNDEFINED") {
+			fixinatorClient.setAPITimeout(configService.getSetting("modules.fixinator.api_timeout", "35"));
+		}
+
 		if (arguments.verbose) {
 			print.greenLine("Fixinator API Server: #fixinatorClient.getAPIURL()#");
 		}
@@ -413,7 +417,7 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 				local.resultIndex++;
 				local.rFile = listGetAt(arguments.resultFile, local.resultIndex);
 				local.rFile = fileSystemUtil.resolvePath( local.rFile );	
-				fixinatorReport.generateReport(resultFile=local.rFile, format=local.rFormat, listBy=arguments.listBy, data=local.results);	
+				fixinatorReport.generateReport(resultFile=local.rFile, format=local.rFormat, listBy=arguments.listBy, data=local.results, fixinatorClientVersion=fixinatorClient.getClientVersion());	
 			}
 		}
 

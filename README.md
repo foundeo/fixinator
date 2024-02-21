@@ -42,11 +42,11 @@ It is highly recommended that you use `autofix` only with code that is under ver
 
 ### resultFile
 
-Writes results to a file specified by the path in resultFile. You may specify a comma seperated list of paths if you want to write multiple formats.
+Writes results to a file specified by the path in resultFile. You may specify a comma separated list of paths if you want to write multiple formats.
 
 ### resultFormat
 
-Specify a format for the `resultFile`:  `json` (default), `html`, `pdf`, `csv`, `junit`, `sast`, or `findbugs`. You may specify a comma seperated list of formats and `resultFile` paths if you want to write multiple files.
+Specify a format for the `resultFile`:  `json` (default), `html`, `pdf`, `csv`, `junit`, `sast`, or `findbugs`. You may specify a comma separated list of formats and `resultFile` paths if you want to write multiple files.
 
 ### ignorePaths
 
@@ -67,6 +67,23 @@ Default: `false` - When `true` scans only files changed in the HEAD git commit, 
 ### gitWorkingCopy
 
 Default: `false` - When `true` scans only the files changed in the working copy (compared to the HEAD git commit). This is useful to scan only the files you have modified since your last git commit. 
+
+### engines
+
+Default: `lucee,adobe` - A comma separated list of CFML engines that your code will run on. This setting is useful to exclude issues specific to Lucee, or Adobe ColdFusion if you only use one or the other. You can pass the list using version numbers as well, for example: `engines=adobe@2021,adobe@2023` or `engines=lucee@6,adobe@2023` - it follows the same syntax used by the commandbox server command's `cfengine` argument. 
+
+Added in Fixinator version 4.
+
+### includeScanners
+
+Default: _Empty_ - A comma separated list of scanners ids to scan (use `--listScanners` to see the options). For example if you only want to scan for SQL Injection, you can use: `includeScanners=sqlinjection` and you will only see SQL Injection Results.
+
+Added in Fixinator version 4.
+
+### configFile
+
+The path to a `.fixinator.json` configuration file to use. See below for details on the file contents. The command line argument overrides the default search path (looking in the base directory).
+
 
 ## Environment Variables
 
@@ -130,10 +147,14 @@ A `.fixinator.json` configuration file can be placed in the root of a folder to 
 		"ignoreScanners":["xss"],
 		"minSeverity": "low",
 		"minConfidence": "low",
-		"ignorePatterns": {}
+		"ignorePatterns": {},
+		"engines": ["lucee","adobe"],
+		"includeScanners":[]
 	}
 
 Note that `.fixinator.json` files placed in a subfolder of the base scan path are currently ignored.
+
+As of Fixinator version 4 you can now specify the `configFile=/path/to/.fixinator.json` to override the default path.
 
 ### ignorePaths
 
@@ -172,6 +193,13 @@ Now suppose you have an a few application variables that are used in SQL, they a
 
 This is a very powerful feature, so make sure you only use it on variables, functions or patterns you know are safe.
 
+### engines
+
+An array of CFML engines that the code runs on.
+
+### includeScanners
+
+An array of scanner ids which to use, all other scanners will be ignored.
 
 ## Ignoring issues in code
 

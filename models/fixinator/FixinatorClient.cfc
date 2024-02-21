@@ -53,6 +53,7 @@ component singleton="true" {
 		var percentValue = 0;
 		var hasProgressBar = isObject(arguments.progressBar);
 		var baseDir = "";
+		var fixinatorJSONPath = "";
 		if (len(arguments.path)) {
 			pathData = getFileInfo(arguments.path)
 			baseDir = getDirectoryFromPath(arguments.path);
@@ -60,13 +61,20 @@ component singleton="true" {
 			//path empty was from file globber pattern
 			pathData.type = "empty";
 		}
-		if (pathData.type!= "empty" && fileExists(baseDir & ".fixinator.json")) {
-			local.fileConfig = fileRead(getDirectoryFromPath(arguments.path) & ".fixinator.json");
+		if (arguments.config.keyExists("configFile") && fileExists(arguments.config.configFile)) {
+			fixinatorJSONPath = arguments.config.configFile;
+			//no need to send this path to server
+			structDelete(arguments.config, "configFile");
+		} else if (pathData.type!= "empty" && fileExists(baseDir & ".fixinator.json")) {
+			fixinatorJSONPath = getDirectoryFromPath(arguments.path) & ".fixinator.json";
+		}
+		if (len(fixinatorJSONPath)) {
+			local.fileConfig = fileRead(fixinatorJSONPath);
 			if (isJSON(local.fileConfig)) {
 				local.fileConfig = deserializeJSON(local.fileConfig);
 				structAppend(payload.config, local.fileConfig, true);
 			} else {
-				throw(message="Invalid .fixinator.json config file, was not valid JSON");
+				throw(message="Invalid .fixinator.json config file, was not valid JSON: #fixinatorJSONPath#");
 			}
 		}
 
@@ -408,22 +416,24 @@ component singleton="true" {
 				throw(message="Fixinator API Returned 429 Status Code (Too Many Requests). This is usually due to an exceded monthly quote limit. You can either purchase a bigger plan or request a one time limit increase.", type="FixinatorClient");
 			} else {
 				//retry it once
-				sleep(500);
+				sleep(1500);
 				return sendPayload(payload=arguments.payload, isRetry=1);
 			}
-		} else if (httpResult.statusCode contains "502" || httpResult.statusCode contains "504") { 
-			//502 BAD GATEWAY or 504 Gateway Timeout - lambda timeout issue
+		} else if (httpResult.statusCode contains "502" || httpResult.statusCode contains "504" || httpResult.statusCode contains "408") { 
+			//502 BAD GATEWAY or 504 Gateway Timeout - lambda timeout issue, 408 general request timeout
 			if (arguments.isRetry >= 2) {
 				local.payloadPaths = arrayMap(arguments.payload.files, function(item) {
 					return item.path;
 				});
 				throw(message="Fixinator API Returned #httpResult.statusCode# Status Code. Please try again shortly or contact Foundeo Inc. if the problem persists.", detail="Paths: #serializeJSON(local.payloadPaths)#", type="FixinatorClient");
 			} else {
-				//retry it
-				sleep(500);
+				
 				if (isDebugModeEnabled()) {
-					debugger("Attempting Retry of Payload #local.payloadID#");
+					debugger("#httpResult.statusCode# Status Code -- #httpResult.fileContent#");
+					debugger("Attempting Retry #arguments.isRetry# of Payload #local.payloadID#");
 				}
+				//retry it
+				sleep(500 + (val(arguments.isRetry)*500));
 				//split payload in to two
 				if (arrayLen(arguments.payload.files) > 2) {
 					local.payloadA = {"config"=arguments.payload.config, files=[]};

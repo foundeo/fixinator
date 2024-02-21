@@ -35,6 +35,9 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 	* @ignoreExtensions.hint A list of extensions to exclude
 	* @gitLastCommit.hint Scan only files changed in the last git commit
 	* @gitWorkingCopy.hint Scan only files changed since the last commit in the working copy
+	* @engines.hint A list of engines your code runs on, eg: lucee@5,adobe@2023 default any
+	* @includeScanners.hint A comma seperated list of scanner ids to scan, all others ignored
+	* @configFile.hint A path to a .fixinator.json file to use
 	**/
 	function run(
         string path=".",
@@ -53,6 +56,9 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
         string ignoreExtensions="",
 		boolean gitLastCommit=false,
 		boolean gitChanged=false,
+		string engines="",
+		string includeScanners="",
+		string configFile=""
     )  {
 		var fileInfo = "";
 		var severityLevel = 1;
@@ -117,20 +123,14 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 			} else {
 
 			}
-			local.email = ask(message="Do you want to request a free key? Please enter your email: ");
-			if (isValid("email", local.email)) {
-				local.phone = ask(message="Phone Number (Optional): ");
-				cfhttp(method="POST", url="https://foundeo.us1.list-manage.com/subscribe/post?u=c10e46f0371b0cedc2340d2d4&id=37b8e52f1a", result="local.httpResult") {
-					cfhttpparam(name="EMAIL", value=local.email, type="formfield");
-					cfhttpparam(name="PHONE", value=local.phone, type="formfield");
-				}
-				if (local.httpResult.statusCode contains "200") {
-					print.boldGreenLine("Thanks, your request has been submitted.");
-				} else {
-					print.boldRedLine("Looks like there was an error submitting your request, please contact Foundeo inc. directly.");
-				}
+			print.line();
+			print.line("To request a free trial api key, please go here: https://fixinator.app/try/");
+			local.answer = ask(message="Would you like to open https://fixinator.app/try/ in your browser now? [y/n]: ");
+			if (left(local.answer, 1) == "y") {
+				command("browse").params(URI="https://fixinator.app/try/").run();
 			}
-
+			print.line();
+			print.line("Exiting Fixinator, please try again once you have an api key");
 			return;
 		}
 
@@ -314,6 +314,23 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 			config.ignoreExtensions = listToArray(replace(arguments.ignoreExtensions, " ", "", "ALL"));
 		}
 
+		if (len(arguments.engines)) {
+			config.engines = listToArray(replace(arguments.engines, " ", "", "ALL"));
+		}
+
+		if (len(arguments.includeScanners)) {
+			config.includeScanners = listToArray(replace(arguments.includeScanners, " ", "", "ALL"));
+		}
+
+		if (len(arguments.configFile)) {
+			arguments.configFile = fileSystemUtil.resolvePath( arguments.configFile );
+			if (!fileExists(arguments.configFile)) {
+				print.boldRedLine("Sorry: configFile was not found: #arguments.configFile#");
+				return;	
+			} else {
+				config.configFile = arguments.configFile;
+			}
+		}
 
 		if (!fileExists(arguments.path) && !directoryExists(arguments.path) && !arrayLen(paths)) {
 			print.boldRedLine("Sorry: #arguments.path# is not a file or directory.");

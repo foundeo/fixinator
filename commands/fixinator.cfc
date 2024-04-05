@@ -18,7 +18,7 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 	/**
 	* @path.hint A file or directory to scan
 	* @resultFile.hint A file path to write the results to - see resultFormat
-	* @resultFormat.hint The format to write the results in [json,html,pdf,junit,findbugs,sast,csv]
+	* @resultFormat.hint The format to write the results in [json,html,pdf,junit,findbugs,sast,csv,sarif]
 	* @resultFormat.optionsUDF resultFormatComplete
 	* @verbose.hint When false limits the output
 	* @listBy.hint Show results by type or file
@@ -639,10 +639,13 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 			}*/
 			if (arguments.verbose && arrayLen(local.results.warnings)) {
 				print.line();
-				print.boldOrangeLine("WARNINGS");
+				print.boldYellowLine("WARNINGS");
+				local.lastWarning = "";
 				for (local.w in local.results.warnings) {
-					if (local.w.keyExists("message") && local.w.keyExists("path")) {
-						print.grayLine(local.w.message);
+					if (isStruct(local.w) && local.w.keyExists("message") && local.w.keyExists("path")) {
+						if (local.lastWarning != local.w.message) {
+							print.grayLine(local.w.message);
+						}
 						print.grayLine("  " & replaceNoCase(local.w.path, getDirectoryFromPath(arguments.path), ""));
 					} else {
 						print.grayLine(serializeJSON(local.w));
@@ -687,7 +690,7 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 	}
 
 	function resultFormatComplete() {
-		return [ 'html', 'json', 'pdf', 'junit', 'findbugs', 'sast', 'csv' ];
+		return [ 'html', 'json', 'pdf', 'junit', 'findbugs', 'sast', 'csv', 'sarif' ];
 	}
 
 	function confidenceComplete() {

@@ -39,6 +39,8 @@
 			<cfset fileWrite(arguments.resultFile, generateFindBugsReport(data=arguments.data))>
 		<cfelseif format IS "csv">
 			<cfset fileWrite(arguments.resultFile, generateCSVReport(data=arguments.data))>
+		<cfelseif format IS "sarif">
+			<cfset fileWrite(arguments.resultFile, generateSarifReport(data=arguments.data))>
 		<cfelse>
 			<cfthrow message="Unsupported result file format">
 		</cfif>
@@ -459,6 +461,94 @@
 			</BugCollection>
 		</cfsavecontent>
 		<cfreturn xml>
+	</cffunction>
+
+	<cffunction name="generateSarifReport" returntype="string" output="false">
+		<cfargument name="data">
+		<cfset var sarif = {
+			"$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+			"version": "2.1.0",
+			"runs": []
+		}>
+		<cfset var run = {}>
+		<cfset var i = "">
+		<cfset var rule = "">
+		<cfset var rules = {}>
+		<cfset var result = "">
+		<cfset var location = "">
+		
+		<cfset run["tool"] = { "driver" = {"name"="Fixinator", "rules":[], "version"=data.fixinator_client_version, "informationUri"="https://fixinator.app/"}}>
+		<cfset run.tool.driver["fullName"] = run.tool.driver.name & " " & run.tool.driver.version>
+		<cfset run["results"] = []>
+		<cfset run["automationDetails"] = {"id":"fixinator/" & reReplace(arguments.data.timestamp, "[^0-9]", "", "ALL")}>
+		<!--- 
+			docs: https://docs.github.com/en/code-security/code-scanning/integrating-with-code-scanning/sarif-support-for-code-scanning#sarif-output-file-examples
+			validator: https://sarifweb.azurewebsites.net/
+		 --->
+		<cfloop array="#arguments.data.results#" index="i">
+			<cfset rule = { "id": "fixinator-#i.scanner#-#i.id#-s#i.severity#-c#i.confidence#" }>
+			<cfif NOT rules.keyExists(rule.id)>
+				<cfset rule["properties"] = {}>
+				<cfset rule["shortDescription"] = {"text":i.description}>
+				<cfset rule["fullDescription"] = rule.shortDescription>
+				<cfset rule["help"] = rule.shortDescription>
+				<cfset rule["name"] = replace(i.title, " ", "", "ALL")>
+				<cfset rule.properties["name"] = rule.name>
+				<cfif i.severity IS 3>
+					<cfset rule.properties["problem.severity"] = "error">
+				<cfelseif i.severity IS 2>
+					<cfset rule.properties["problem.severity"] = "warning">
+				<cfelse>
+					<cfset rule.properties["problem.severity"] = "recommendation">
+				</cfif>
+				<cfif i.keyExists("confidence") AND isNumeric(i.confidence)>
+					<cfif i.severity IS 3>
+						<cfset rule.properties["precision"] = "high">
+					<cfelseif i.severity IS 2>
+						<cfset rule.properties["precision"] = "medium">
+					<cfelse>
+						<cfset rule.properties["precision"] = "low">
+					</cfif>
+				</cfif>
+				<cfset rule["helpUri"] = "https://foundeo.com/security/guide/">
+				<cfif i.keyExists("link") AND len(i.link)>
+					<cfset rule.helpUri = i.link>
+				</cfif>
+				<cfset arrayAppend(run.tool.driver.rules, rule)>
+			</cfif>
+			<cfset result = {"ruleId":rule.id, "message":{"text":i.category & ": " & i.message}, "locations":[]}>
+			<cfset location = {"physicalLocation": {"artifactLocation":{"uri":""}}}>
+			
+			<cfif i.keyExists("path")>
+				<cfset local.p = i.path>
+				<cfif left(local.p, 1) IS "/">
+					<cfset local.p = replace(local.p, "/", "", "ONE")>
+				</cfif>
+				<cfset location.physicalLocation.artifactLocation.uri = local.p>
+			</cfif>
+			<cfset location.physicalLocation["region"] = {"startLine":1, "startColumn":1, "endLine":1, "endColumn":1}>
+			<cfif i.keyExists("line") AND isValid("integer", i.line)>
+				<cfset location.physicalLocation.region.startLine = javaCast("int", i.line)>
+				<cfset location.physicalLocation.region.endLine = javaCast("int", i.line)>
+			</cfif>
+			<cfif i.keyExists("context") AND len(i.context)>
+				<cfset location.physicalLocation.region["snippet"] = {"text":i.context}>
+			</cfif>
+			<cfset arrayAppend(result.locations, location)>
+			<cfset local.fingerPrintRaw = "#location.physicalLocation.artifactLocation.uri#:#location.physicalLocation.region.startLine#">
+			<cfif i.keyExists("column")>
+				<cfset local.fingerPrintRaw &= ":#i.column#">
+			</cfif>
+			<cfif i.keyExists("context")>
+				<cfset local.fingerPrintRaw &= ":#i.context#">
+			</cfif>
+			<cfset result["partialFingerprints"] = {"primaryLocationLineHash":"#hash(local.fingerPrintRaw, "SHA-256")#:#location.physicalLocation.region.startLine#"}>
+			
+			<cfset arrayAppend(run.results, result)>
+		</cfloop>
+		<cfset arrayAppend(sarif.runs, run)>
+		<!---<cfset sarif["fixinator"] = arguments.data>--->
+		<cfreturn serializeJSON(sarif)>
 	</cffunction>
 
 	<cffunction name="getClassNameFromFilePath" returntype="string" output="false">

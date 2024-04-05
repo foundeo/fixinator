@@ -276,6 +276,9 @@ component singleton="true" {
 									if (local.result.keyExists("categories")) {
 										element.results["categories"] = local.result.categories;
 									} 
+									if (local.result.keyExists("warnings") && isArray(local.result.warnings) && arrayLen(local.result.warnings)) {
+										arrayAppend(element.results.warnings, local.result.warnings, true);
+									}
 									payload.result = local.result;
 									//arrayAppend(results.payloads, payload);
 									local.size = 0;
@@ -304,6 +307,9 @@ component singleton="true" {
 					} 
 					//arrayAppend(results.payloads, payload);
 					arrayAppend(element.results.results, local.result.results, true);
+					if (local.result.keyExists("warnings") && isArray(local.result.warnings) && arrayLen(local.result.warnings)) {
+						arrayAppend(element.results.warnings, local.result.warnings, true);
+					}
 				}
 
 			} catch (any e) {
@@ -378,18 +384,20 @@ component singleton="true" {
 
 	public function sendPayload(payload, isRetry=0) {
 		var httpResult = "";
+		local.payloadID = left(createUUID(),12);
 		if (isDebugModeEnabled()) {
-			local.payloadID = createUUID();
+			
 			local.payloadPaths = arrayMap(arguments.payload.files, function(item) {
 				return item.path;
 			});
 			debugger("Sending Payload #local.payloadID# to #getAPIURL()# of #arrayLen(arguments.payload.files)# files. isRetry:#arguments.isRetry#");
 			debugger("Payload Paths #local.payloadID#: #serializeJSON(local.payloadPaths)#");
-			local.tick = getTickCount();
 		} 
+		local.tick = getTickCount();
 		cfhttp(url=getAPIURL(), method="POST", result="httpResult", timeout=getAPITimeout()) {
 			cfhttpparam(type="header", name="Content-Type", value="application/json");
 			cfhttpparam(type="header", name="x-api-key", value=getAPIKey());
+			cfhttpparam(type="header", name="X-Payload-ID", value=local.payloadID);
 			cfhttpparam(type="header", name="X-Client-Version", value=getClientVersion());
 			cfhttpparam(value="#serializeJSON(payload)#", type="body");
 		}
@@ -425,7 +433,22 @@ component singleton="true" {
 				local.payloadPaths = arrayMap(arguments.payload.files, function(item) {
 					return item.path;
 				});
-				throw(message="Fixinator API Returned #httpResult.statusCode# Status Code. Please try again shortly or contact Foundeo Inc. if the problem persists.", detail="Paths: #serializeJSON(local.payloadPaths)#", type="FixinatorClient");
+				if (isDebugModeEnabled()) {
+					debugger("#local.payloadID#: #httpResult.statusCode# Status Code -- #httpResult.fileContent#");
+				}
+				/*
+					Timeouts may happen when really large files take too long to process
+					Instead of erroring out the entire scan with a throw, add warnings
+					and let the scan continue.
+				*/
+				//throw(message="Fixinator API Returned #httpResult.statusCode# Status Code. Please try again shortly or contact Foundeo Inc. if the problem persists.", detail="Paths: #serializeJSON(local.payloadPaths)#", type="FixinatorClient");
+				local.result = {"warnings":[], "results":[]};
+				local.fileOrFiles = arrayLen(local.payloadPaths) == 1 ? "file" : "files";
+				for (local.path in local.payloadPaths) {
+					arrayAppend(local.result.warnings, {"message":"Fixinator API Returned #httpResult.statusCode#, took #getTickCount()-local.tick#ms, attempts: #arguments.isRetry#, skipped #arrayLen(arguments.payload.files)# #local.fileOrFiles# [#local.payloadID#]", "path":local.path});
+				} 
+				
+				return local.result;
 			} else {
 				
 				if (isDebugModeEnabled()) {
@@ -547,7 +570,7 @@ component singleton="true" {
 	public function fixCode(basePath, fixes, writeFiles=true) {
 		var fix = "";
 		var basePathInfo = getFileInfo(arguments.basePath);
-		var results = {"fixes"={}, warnings=[]};
+		var results = {"fixes"={}, "warnings"=[]};
 		var i=0;
 		//sort issues by file first then by position
 		arraySort(

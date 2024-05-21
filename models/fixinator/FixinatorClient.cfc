@@ -30,7 +30,7 @@ component singleton="true" {
 			local.path = getCurrentTemplatePath();
 			local.path = replace(local.path, "\", "/", "ALL");
 			local.path = replace(local.path, "/models/fixinator/FixinatorClient.cfc", "/box.json");
-			if (fileExists(local.path)) {
+			if (fileExists(local.path) && getFileFromPath(local.path) == "box.json") {
 				local.data = deserializeJSON(fileRead(local.path));
 				variables.clientVersion = local.data.version;	
 			} else {

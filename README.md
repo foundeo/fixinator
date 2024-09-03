@@ -16,7 +16,7 @@ When running the `fixinator` command via the command line you can set the follow
 
 ### path
 
-The folder or file to scan. As of version 2.0 you can also pass a file globber pattern.
+The folder or file to scan. As of version 2.0 you can also pass a [file globber](https://commandbox.ortusbooks.com/usage/parameters/globbing-patterns) pattern, eg: `path=c:\code\**.cfc`
 
 ### confidence
 

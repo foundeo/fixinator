@@ -421,7 +421,7 @@ component singleton="true" {
 		} else if (httpResult.statusCode contains "429") { 
 			//TOO MANY REQUESTS
 			if (arguments.isRetry == 1) {
-				throw(message="Fixinator API Returned 429 Status Code (Too Many Requests). This is usually due to an exceded monthly quote limit. You can either purchase a bigger plan or request a one time limit increase.", type="FixinatorClient");
+				throw(message="Fixinator API Returned 429 Status Code (Too Many Requests). This is usually due to an exceeded monthly quota limit. You can either purchase a bigger plan or request a one time limit increase.", type="FixinatorClient");
 			} else {
 				//retry it once
 				sleep(1500);

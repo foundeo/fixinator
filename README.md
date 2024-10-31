@@ -84,6 +84,15 @@ Added in Fixinator version 4.
 
 The path to a `.fixinator.json` configuration file to use. See below for details on the file contents. The command line argument overrides the default search path (looking in the base directory).
 
+### goals
+
+Default: `security` - a comma separated list of goals for the scan. Possible values are `security` and `compatibility` 
+
+When the `compatibility` goal is passed it will return compatibility issues found in the code for the `engines` specified. Typically when you use the `compatibility` mode you will specify the `engines` argument as well. Example
+
+	fixinator path=c:\mycode\ goals=security,compatibility engines=adobe@2023
+
+Added in Fixinator Version 5.
 
 ## Environment Variables
 

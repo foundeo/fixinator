@@ -38,6 +38,7 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 	* @engines.hint A list of engines your code runs on, eg: lucee@5,adobe@2023 default any
 	* @includeScanners.hint A comma seperated list of scanner ids to scan, all others ignored
 	* @configFile.hint A path to a .fixinator.json file to use
+	* @goals.hint A list of goals for scanning [compatibility,security], default: security
 	**/
 	function run(
         string path=".",
@@ -58,7 +59,8 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 		boolean gitChanged=false,
 		string engines="",
 		string includeScanners="",
-		string configFile=""
+		string configFile="",
+		string goals="security"
     )  {
 		var fileInfo = "";
 		var severityLevel = 1;
@@ -320,6 +322,9 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 
 		if (len(arguments.includeScanners)) {
 			config.includeScanners = listToArray(replace(arguments.includeScanners, " ", "", "ALL"));
+		}
+		if (len(arguments.goals)) {
+			config["goals"] = listToArray(replace(arguments.goals, " ", "", "ALL"));
 		}
 
 		if (len(arguments.configFile)) {
@@ -606,23 +611,7 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 				}
 			}
 
-			if (arguments.listScanners && local.results.keyExists("categories")) {
-				print.line();
-				print.line("Results by Scanner (confidence=#local.results.config.minConfidence#, severity=#local.results.config.minSeverity#):");
-				for (local.cat in local.results.categories) {
-					local.issues = 0;
-					for (local.i in local.results.results) {
-						if (local.i.id == local.cat) {
-							local.issues++;
-						}
-					}
-					if (local.issues == 0) {
-						print.greenLine("  ✓ " & local.results.categories[cat].name & " [" & cat & "]" );
-					} else {
-						print.redLine("  ! " & local.results.categories[cat].name & " [" & cat & "] (" & local.issues & ")"  );
-					}
-				}
-			}
+			
 
 			/*
 			for (local.i in local.results.results) {
@@ -663,20 +652,38 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 			}
 
 
-			if (arguments.debug) {
-				local.debugLogFile = expandPath("{lucee-web}/logs/fixinator-client-debug.log");
-				print.line();
-				if (fileExists(local.debugLogFile)) {
-					print.boldGreenLine("Debug information logged to: #local.debugLogFile#");
+			
+
+			
+			
+		}
+		
+		if (arguments.listScanners && local.results.keyExists("categories")) {
+			print.line();
+			print.line("Results by Scanner (confidence=#local.results.config.minConfidence#, severity=#local.results.config.minSeverity#):");
+			for (local.cat in local.results.categories) {
+				local.issues = 0;
+				for (local.i in local.results.results) {
+					if (local.i.id == local.cat) {
+						local.issues++;
+					}
+				}
+				if (local.issues == 0) {
+					print.greenLine("  ✓ " & local.results.categories[cat].name & " [" & cat & "]" );
 				} else {
-					print.boldRedLine("Expected debug information to be logged to: #local.debugLogFile# but the file does not exist.");
+					print.redLine("  ! " & local.results.categories[cat].name & " [" & cat & "] (" & local.issues & ")"  );
 				}
 			}
+		}
 
-			if (arguments.failOnIssues) {
-				setExitCode( 1 );	
+		if (arguments.debug) {
+			local.debugLogFile = expandPath("{lucee-web}/logs/fixinator-client-debug.log");
+			print.line();
+			if (fileExists(local.debugLogFile)) {
+				print.boldGreenLine("Debug information logged to: #local.debugLogFile#");
+			} else {
+				print.boldRedLine("Expected debug information to be logged to: #local.debugLogFile# but the file does not exist.");
 			}
-			
 		}
 
 		if (fixinatorClient.hasClientUpdate()) {
@@ -686,6 +693,11 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 		}
 
 
+		if (arrayLen(local.results.results) > 0 ) {
+			if (arguments.failOnIssues) {
+				setExitCode( 1 );	
+			}
+		}
 
 	}
 

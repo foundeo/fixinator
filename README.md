@@ -146,6 +146,17 @@ You can also set this value by running:
 
 This variable should only be used with the enterprise edition.
 
+### FIXINATOR_MAX_CONCURRENCY `ENTERPRISE EDITION`
+
+The `FIXINATOR_MAX_CONCURRENCY` environment variable specifies the maximum number of 
+threads to use
+
+You can also set this value by running:
+
+	box config set modules.fixinator.max_concurrency=8
+
+The default value is `8`
+
 ## .fixinator.json
 
 A `.fixinator.json` configuration file can be placed in the root of a folder to be scanned. For Example:

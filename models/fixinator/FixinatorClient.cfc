@@ -21,6 +21,11 @@ component singleton="true" {
 		variables.apiTimeout = trim(variables.system.getenv("FIXINATOR_API_TIMEOUT"));
 	}
 
+	variables.maxConcurrency = 8;
+	if (!isNull(variables.system.getenv("FIXINATOR_MAX_CONCURRENCY"))) {
+		variables.maxConcurrency = trim(variables.system.getenv("FIXINATOR_MAX_CONCURRENCY"));
+	}
+
 	variables.clientUpdate = false;
 	variables.debugMode = false;
 	
@@ -138,7 +143,15 @@ component singleton="true" {
 		}
 		if (server.keyExists("lucee")) {
 			//run parallel on lucee
-			arrayEach(local.batches, processBatch, true, arrayLen(local.batches));	
+			local.concurrency = arrayLen(local.batches);
+			if (local.concurrency > variables.maxConcurrency) {
+				local.concurrency = variables.maxConcurrency;
+			}
+			//use at least 2 threads, to allow progressbar to update
+			if (hasProgressBar && local.concurrency < 2) {
+				local.concurrency = 2;
+			}
+			arrayEach(local.batches, processBatch, true, local.concurrency);	
 		} else {
 			arrayEach(local.batches, processBatch);	
 		}
@@ -202,6 +215,14 @@ component singleton="true" {
 
 	public function setAPITimeout(numeric apiTimeout) {
 		variables.apiTimeout = arguments.apiTimeout;
+	}
+
+	public function getMaxConcurrency() {
+		return variables.maxConcurrency;
+	}
+
+	public function setMaxConcurrency(numeric maxConcurrency) {
+		variables.maxConcurrency = arguments.maxConcurrency;
 	}
 
 	public function getLockTimeout() {

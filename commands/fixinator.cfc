@@ -178,6 +178,10 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 			fixinatorClient.setAPITimeout(configService.getSetting("modules.fixinator.api_timeout", "35"));
 		}
 
+		if (configService.getSetting("modules.fixinator.max_concurrency", "UNDEFINED") != "UNDEFINED") {
+			fixinatorClient.setMaxConcurrency(configService.getSetting("modules.fixinator.max_concurrency", "8"));
+		}
+
 		if (arguments.verbose) {
 			print.greenLine("Fixinator API Server: #fixinatorClient.getAPIURL()#");
 		}

@@ -15,6 +15,29 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 	property name="shell" inject="shell";
 
 
+	//used for validation to avoid typos
+	variables.supportedArgs = ["path", 
+		"resultFile",
+		"resultFormat",
+		"verbose",
+		"listBy",
+		"severity",
+		"confidence",
+		"ignoreScanners",
+		"autofix",
+		"failOnIssues",
+		"debug",
+		"listScanners",
+		"ignorePaths",
+		"ignoreExtensions",
+		"gitLastCommit",
+		"gitChanged",
+		"engines",
+		"includeScanners",
+		"configFile",
+		"goals"
+	];
+
 	/**
 	* @path.hint A file or directory to scan
 	* @resultFile.hint A file path to write the results to - see resultFormat
@@ -26,7 +49,7 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 	* @severity.optionsUDF severityComplete
 	* @confidence.hint The minimum confidence level none, low, medium or high
 	* @confidence.optionsUDF confidenceComplete
-	* @ignoreScanners.hint A comma seperated list of scanner ids to ignore
+	* @ignoreScanners.hint A comma separated list of scanner ids to ignore
 	* @autofix.hint Use either off, prompt or automatic
 	* @failOnIssues.hint Determines if an exit code is set to 1 when issues are found.
 	* @debug.hint Enable debug mode
@@ -34,16 +57,17 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 	* @ignorePaths.hint A globber paths pattern to exclude
 	* @ignoreExtensions.hint A list of extensions to exclude
 	* @gitLastCommit.hint Scan only files changed in the last git commit
-	* @gitWorkingCopy.hint Scan only files changed since the last commit in the working copy
+	* @gitChanged.hint Scan only files changed since the last commit in the working copy
 	* @engines.hint A list of engines your code runs on, eg: lucee@5,adobe@2023 default any
-	* @includeScanners.hint A comma seperated list of scanner ids to scan, all others ignored
+	* @includeScanners.hint A comma separated list of scanner ids to scan, all others ignored
 	* @configFile.hint A path to a .fixinator.json file to use
 	* @goals.hint A list of goals for scanning [compatibility,security], default: security
+	* @goals.optionsUDF goalsComplete
 	**/
 	function run(
         string path=".",
         string resultFile,
-        string resultFormat="json",
+        string resultFormat="",
         boolean verbose=true,
         string listBy="type",
         string severity="default",
@@ -68,10 +92,12 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 		var config = {};
 		var toFix = [];
 		var paths = [];
+		var isEnterprise = false;
+		var arg = "";
 		if (arguments.verbose) {
 			//arguments.listScanners = true;
 			
-			print.greenLine("fixinator v#fixinatorClient.getClientVersion()# built by Foundeo Inc.").line();
+			print.greenLine("fixinator client v#fixinatorClient.getClientVersion()# built by Foundeo Inc.").line();
 			print.grayLine("    ___                      _             ");
 			print.grayLine("   / __)                    | |            ");		
 			print.grayLine(" _| |__ ___  _   _ ____   __| |_____  ___  ");
@@ -82,23 +108,47 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 			print.line();
 		}
 
+		try {
+			var enterpriseInstance = new fixinatorapi.app.models.fixinator();
+			if (arguments.verbose) {
+				print.grayLine("Fixinator Enterprise v#enterpriseInstance.getVersion()# Detected");
+			}
+			fixinatorClient.setFixinatorEnterpriseInstance(enterpriseInstance);
+			if (fixinatorClient.getMaxPayloadSize() == (1024*640)) {
+				//increase default for enterprise version to 2mb, can be overridden in settings
+				fixinatorClient.setMaxPayloadSize(2*1024*1024);
+			}
+			isEnterprise = true;
+		} catch(any entErr) {
+			//not using enterprise version
+		}
 
+		//validate arguments
+		for (arg in arguments) {
+			if (!arrayFindNoCase(variables.supportedArgs, arg)) {
+				print.boldRedLine("Invalid argument: #reReplace(arg, '[^a-zA-Z0-9]', '', 'ALL')# passed to fixinator.");
+				print.redLine("Type help fixinator to see the supported arguments.");
+				setExitCode(1);
+				return;
+			}
+		}
 
 		if (configService.getSetting("modules.fixinator.api_key", "UNDEFINED") != "UNDEFINED") {
 			fixinatorClient.setAPIKey(configService.getSetting("modules.fixinator.api_key", "UNDEFINED"));
 		}
 
-		if (fixinatorClient.getAPIKey() == "UNDEFINED") {
+		if (!fixinatorClient.hasFixinatorEnterpriseInstance() && fixinatorClient.getAPIKey() == "UNDEFINED") {
 			print.boldOrangeLine("Missing Fixinator API Key");
 			print.orangeLine("  Set via commandbox: config set modules.fixinator.api_key=YOUR_API_KEY");
 			print.orangeLine("  Or set an environment variable FIXINATOR_API_KEY=YOUR_API_KEY");
 			print.line();
-			print.line("For details please visit: https://fixinator.app/");
+			print.line("An API Key is required, unless you are using the Enterprise Version of Fixinator.");
+			print.line("  For details please visit: https://fixinator.app/");
 			print.line();
 			if (isRunningInCI()) {
 				//in CI we don't want to prompt
-				print.line("Detected CI Envrionment. Please add the FIXINATOR_API_KEY as a secure environment variable to your CI platform.");
-
+				print.line("Detected CI Environment. Please add the FIXINATOR_API_KEY as a secure environment variable to your CI platform.");
+				
 				if (isTravisCI()) {
 					print.line("Documentation: https://github.com/foundeo/fixinator/wiki/Running-Fixinator-on-Travis-CI");
 				}
@@ -119,17 +169,27 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 					print.line("Documentation: https://github.com/foundeo/fixinator/wiki/Running-Fixinator-on-Jenkins");
 				}
 
+				print.line();
+				print.line("Running the Enterprise Version of Fixinator?");
+				printEnterpriseInstallInstructions();
 
 				setExitCode(1);
 				return;
-			} else {
+			} 
+			
 
-			}
 			print.line();
 			print.line("To request a free trial api key, please go here: https://fixinator.app/try/");
 			local.answer = ask(message="Would you like to open https://fixinator.app/try/ in your browser now? [y/n]: ");
 			if (left(local.answer, 1) == "y") {
 				command("browse").params(URI="https://fixinator.app/try/").run();
+			} else {
+				print.line();
+				local.answer = ask(message="Do you have a Fixinator Enterprise Version License? [y/n]: ");
+				if (left(local.answer, 1) == "y") {
+					print.line("You do not need an API key to run the Fixinator Enterprise Version Locally.");
+					printEnterpriseInstallInstructions();
+				}
 			}
 			print.line();
 			print.line("Exiting Fixinator, please try again once you have an api key");
@@ -141,7 +201,7 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 			fixinatorClient.setAPIURL(configService.getSetting("modules.fixinator.api_url", "UNDEFINED"));
 		}
 
-		if (fixinatorClient.isCloudAPIURL() && configService.getSetting("modules.fixinator.accept_policy", "UNDEFINED") == "UNDEFINED") {
+		if (!fixinatorClient.hasFixinatorEnterpriseInstance() && fixinatorClient.isCloudAPIURL() && configService.getSetting("modules.fixinator.accept_policy", "UNDEFINED") == "UNDEFINED") {
 			print.line();
 			print.line("Fixinator will send source code to: " & fixinatorClient.getAPIURL());
 			print.line("for scanning. The code is kept in RAM during scanning and is not persisted.");
@@ -164,6 +224,22 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 			
 		}
 
+		if (!fixinatorClient.hasFixinatorEnterpriseInstance() && fixinatorClient.isCloudAPIURL() && left(fixinatorClient.getAPIKey(), 1) != "f") {
+			var maskedKey = left(fixinatorClient.getAPIKey(), 4);
+			if (len(fixinatorClient.getAPIKey()) > 4) {
+				maskedKey &= repeatString("*", len(fixinatorClient.getAPIKey())-4);
+			}
+			if (fixinatorClient.getAPIKey() == "UNDEFINED") {
+				maskedKey = "UNDEFINED";
+			}
+			print.line();
+			print.line("Invalid License Key(#maskedKey#) for API Server: " & fixinatorClient.getAPIURL());
+			print.line("Running the Enterprise Version?");
+			printEnterpriseInstallInstructions();
+			setExitCode(1);
+			return;
+		}
+
 		
 
 		if (configService.getSetting("modules.fixinator.max_payload_size", "UNDEFINED") != "UNDEFINED") {
@@ -182,7 +258,7 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 			fixinatorClient.setMaxConcurrency(configService.getSetting("modules.fixinator.max_concurrency", "8"));
 		}
 
-		if (arguments.verbose) {
+		if (arguments.verbose && !fixinatorClient.hasFixinatorEnterpriseInstance()) {
 			print.greenLine("Fixinator API Server: #fixinatorClient.getAPIURL()#");
 		}
 
@@ -438,6 +514,17 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 		
 		if (len(arguments.resultFile)) {
 			local.resultIndex = 0;
+			//default resultFormat to the file extension if supported
+			if (len(arguments.resultFormat) == 0) {
+				if (listFindNoCase("pdf,html,csv,json", listLast(arguments.resultFile, "."))) {
+					arguments.resultFormat = lcase(listLast(arguments.resultFile, "."));
+				} else {
+					//defaults to json
+					arguments.resultFormat = "json";
+				}
+			}
+			local.results["fixinatorArguments"] = duplicate(arguments);
+			local.results["fixinatorArguments"]["pwd"] = shell.pwd();
 			//allow a list of formats and file paths
 			for (local.rFormat in listToArray(arguments.resultFormat)) {
 				local.resultIndex++;
@@ -449,8 +536,16 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 
 
 		if (arrayLen(local.results.results) == 0 && arrayLen(local.results.warnings) == 0)   {
-			print.line().boldGreenLine("✓ 0 Issues Found");
+			print.line().boldGreenLine("0 Issues Found");
 			if (arguments.verbose) {
+				print.line();      
+				print.greenLine("              //");
+				print.greenLine("             //"); 
+				print.greenLine("            //");
+				print.greenLine("       \\  //");   
+				print.greenLine("        \\//");
+				
+				print.line();
 				if (local.results.config.minSeverity != "low" || local.results.config.minConfidence != "low") {
 					print.line().line("Tip: For additional results try decreasing the severity or confidence level to medium or low");
 					print.line("For example: box fixinator confidence=low path=/some/file.cfm");
@@ -717,6 +812,20 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 		return [ 'low', 'medium', 'high', 'warn' ];
 	}
 
+	function goalsComplete() {
+		return [ 'security', 'compatibility', 'security,compatibility' ];
+	}
+
+	private function printEnterpriseInstallInstructions() {
+		print.boldLine("Perform one of these steps to setup the enterprise version:");
+		print.line("	* Install the fixinator enterprise command (version 6 and up): ");
+		print.line("		box install c:\temp\fixinator-enterprise-x.y.z.zip")
+		print.line("	* Or if running your own Fixinator server set the FIXINATOR_API_URL environment variable or run:");
+		print.line("		box config set modules.fixinator.api_url=http://127.0.0.1:48443/scan/");
+		print.line();
+		print.line("See instructions.txt located in your fixinator-enterprise.zip file for details.");
+		print.line("The zip file can be downloaded from your customer account on foundeo.com");
+	}
 
 	private boolean function isRunningInCI() {
 		var env = server.system.environment;

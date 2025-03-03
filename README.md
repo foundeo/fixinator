@@ -64,7 +64,7 @@ Default: `false` - Prints out a list of scanners supported by the server in the 
 
 Default: `false` - When `true` scans only files changed in the HEAD git commit, this is useful in CI to scan only the files changed in a specific commit. 
 
-### gitWorkingCopy
+### gitChanged
 
 Default: `false` - When `true` scans only the files changed in the working copy (compared to the HEAD git commit). This is useful to scan only the files you have modified since your last git commit. 
 

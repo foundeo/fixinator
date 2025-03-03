@@ -1,4 +1,4 @@
-component singleton="true" {
+component {
 
 	variables.system = createObject("java", "java.lang.System");
 	variables.maxPayloadSize = 1 * 640 * 1024;//half mb+128b
@@ -233,8 +233,24 @@ component singleton="true" {
 		variables.maxPayloadSize = arguments.size;
 	}
 
+	public function getMaxPayloadSize() {
+		return variables.maxPayloadSize;
+	}
+
 	public function setMaxPayloadFileCount(numeric count) {
 		variables.maxPayloadFileCount = arguments.count;
+	}
+
+	public function setFixinatorEnterpriseInstance(any instance) {
+		variables.fixinatorEnterpriseInstance = arguments.instance;
+	}
+
+	public function getFixinatorEnterpriseInstance() {
+		return variables.fixinatorEnterpriseInstance;
+	}
+
+	public function hasFixinatorEnterpriseInstance() {
+		return variables.keyExists("fixinatorEnterpriseInstance");
 	}
 
 	private function processBatch(element, index) {
@@ -405,6 +421,12 @@ component singleton="true" {
 
 	public function sendPayload(payload, isRetry=0) {
 		var httpResult = "";
+
+		//if enterprise version locally installed, use that
+		if (hasFixinatorEnterpriseInstance()) {
+			return sendPayloadEnterprise(payload=arguments.payload);
+		}
+
 		local.payloadID = left(createUUID(),12);
 		if (isDebugModeEnabled()) {
 			
@@ -414,6 +436,7 @@ component singleton="true" {
 			debugger("Sending Payload #local.payloadID# to #getAPIURL()# of #arrayLen(arguments.payload.files)# files. isRetry:#arguments.isRetry#");
 			debugger("Payload Paths #local.payloadID#: #serializeJSON(local.payloadPaths)#");
 		} 
+
 		local.tick = getTickCount();
 		cfhttp(url=getAPIURL(), method="POST", result="httpResult", timeout=getAPITimeout()) {
 			cfhttpparam(type="header", name="Content-Type", value="application/json");
@@ -517,6 +540,19 @@ component singleton="true" {
 		}
 
 		return deserializeJSON(httpResult.fileContent);
+	}
+
+	public function sendPayloadEnterprise(payload) {
+		if (isDebugModeEnabled()) {
+			local.payloadID = left(createUUID(),12);
+			local.payloadPaths = arrayMap(arguments.payload.files, function(item) {
+				return item.path;
+			});
+			debugger("Sending Payload #local.payloadID# of #arrayLen(arguments.payload.files)# files to Fixinator Enterprise.");
+			debugger("Payload Paths #local.payloadID#: #serializeJSON(local.payloadPaths)#");
+		} 
+		var fixinatorEnterprise = getFixinatorEnterpriseInstance();
+		return fixinatorEnterprise.scan(payload);
 	}
 
 	public function getAPIKey() {

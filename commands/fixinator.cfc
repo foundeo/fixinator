@@ -130,8 +130,10 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 			isEnterprise = true;
 		} catch(any entErr) {
 			//not using enterprise version
-			if (!arguments.forceLocal) {
+			if (arguments.forceLocal) {
 				rethrow;
+			} else if (arguments.debug) {
+				print.grayLine("Debug: Failed to Load Enterprise Instance: #entErr.message#");
 			}
 		}
 

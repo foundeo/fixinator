@@ -622,6 +622,7 @@
 					<cfset rule.helpUri = i.link>
 				</cfif>
 				<cfset arrayAppend(run.tool.driver.rules, rule)>
+				<cfset rules[rule.id] = rule>
 			</cfif>
 			<cfset result = {"ruleId":rule.id, "message":{"text":i.category & ": " & i.message}, "locations":[]}>
 			<cfset location = {"physicalLocation": {"artifactLocation":{"uri":""}}}>

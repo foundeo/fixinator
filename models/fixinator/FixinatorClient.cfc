@@ -28,6 +28,8 @@ component {
 
 	variables.clientUpdate = false;
 	variables.debugMode = false;
+
+	variables.forceLocal = false;
 	
 	public function getClientVersion() {
 		if (!structKeyExists(variables, "clientVersion")) {
@@ -425,6 +427,8 @@ component {
 		//if enterprise version locally installed, use that
 		if (hasFixinatorEnterpriseInstance()) {
 			return sendPayloadEnterprise(payload=arguments.payload);
+		} else if (variables.forceLocal) {
+			throw(message="Enterprise instance was not detected, and forceLocal was enabled");
 		}
 
 		local.payloadID = left(createUUID(),12);
@@ -737,6 +741,14 @@ component {
 
 		}
 		return results;
+	}
+
+	public void function setForceLocal(boolean forceLocal) {
+		variables.forceLocal = arguments.forceLocal;
+	}
+
+	public boolean function getForceLocal() {
+		return variables.forceLocal;
 	}
 
 	public function getFixinatorCategories() {

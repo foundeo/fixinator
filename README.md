@@ -94,6 +94,18 @@ When the `compatibility` goal is passed it will return compatibility issues foun
 
 Added in Fixinator Version 5.
 
+### json
+
+Default: `false` - when true outputs json results to the console
+
+Added in Fixinator Version 6.1.0
+
+### forceLocal
+
+Default: `false` - when true requires that the enterprise version is installed locally, for a local scan.
+
+Added in Fixinator Version 6.1.0
+
 ## Environment Variables
 
 The following environment variables are used by fixinator:

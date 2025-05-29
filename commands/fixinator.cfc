@@ -35,7 +35,9 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 		"engines",
 		"includeScanners",
 		"configFile",
-		"goals"
+		"goals",
+		"json",
+		"forceLocal"
 	];
 
 	/**
@@ -63,6 +65,8 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 	* @configFile.hint A path to a .fixinator.json file to use
 	* @goals.hint A list of goals for scanning [compatibility,security], default: security
 	* @goals.optionsUDF goalsComplete
+	* @json.hint When true outputs results to the console as JSON
+	* @forceLocal.hint When true requires that the scan run locally with enterprise version
 	**/
 	function run(
         string path=".",
@@ -84,7 +88,9 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 		string engines="",
 		string includeScanners="",
 		string configFile="",
-		string goals="security"
+		string goals="security",
+		boolean json=false,
+		boolean forceLocal=false
     )  {
 		var fileInfo = "";
 		var severityLevel = 1;
@@ -94,6 +100,9 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 		var paths = [];
 		var isEnterprise = false;
 		var arg = "";
+		if (arguments.json) {
+			arguments.verbose=false;
+		}
 		if (arguments.verbose) {
 			//arguments.listScanners = true;
 			
@@ -121,6 +130,18 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 			isEnterprise = true;
 		} catch(any entErr) {
 			//not using enterprise version
+			if (!arguments.forceLocal) {
+				rethrow;
+			}
+		}
+
+		if (arguments.forceLocal) {
+			fixinatorClient.setForceLocal(true);
+			if (!isEnterprise) {
+				error("Enterprise version was not loaded and forceLocal was specified");
+				setExitCode(1);
+				return;
+			}
 		}
 
 		//validate arguments
@@ -201,7 +222,7 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 			fixinatorClient.setAPIURL(configService.getSetting("modules.fixinator.api_url", "UNDEFINED"));
 		}
 
-		if (!fixinatorClient.hasFixinatorEnterpriseInstance() && fixinatorClient.isCloudAPIURL() && configService.getSetting("modules.fixinator.accept_policy", "UNDEFINED") == "UNDEFINED") {
+		if (!fixinatorClient.hasFixinatorEnterpriseInstance() && fixinatorClient.isCloudAPIURL() && configService.getSetting("modules.fixinator.accept_policy", "UNDEFINED") == "UNDEFINED" && !arguments.json) {
 			print.line();
 			print.line("Fixinator will send source code to: " & fixinatorClient.getAPIURL());
 			print.line("for scanning. The code is kept in RAM during scanning and is not persisted.");
@@ -264,8 +285,10 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 
 		if (arguments.debug) {
 			fixinatorClient.setDebugMode(true);
-			print.greenLine("✓ DEBUG MODE ENABLED: #fixinatorClient.isDebugModeEnabled()#");
-			print.greenLine("   ↳ #expandPath("{lucee-web}/logs/fixinator-client-debug.log")#");
+			if (arguments.verbose) {
+				print.greenLine("✓ DEBUG MODE ENABLED: #fixinatorClient.isDebugModeEnabled()#");
+				print.greenLine("   ↳ #expandPath("{lucee-web}/logs/fixinator-client-debug.log")#");
+			}
 		}
 
 		
@@ -278,7 +301,7 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 			try {
 				if (arguments.gitLastCommit && arguments.verbose) {
 					print.yellowLine("Scanning only files changed in the last git commit.");
-				} else {
+				} else if (arguments.verbose) {
 					print.yellowLine("Scanning only files changed since the last git commit.");
 				}
 				arguments.path = fileSystemUtil.resolvePath( arguments.path );
@@ -371,7 +394,7 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 
 		if (!listFindNoCase("warn,low,medium,high", arguments.severity)) {
 			if (arguments.severity !="default") {
-				print.redLine("Invalid minimum severity level, use: warn,low,medium,high");
+				error("Invalid minimum severity level, use: warn,low,medium,high");
 				return;
 			}
 		} else {
@@ -380,7 +403,7 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 
 		if (!listFindNoCase("none,low,medium,high", arguments.confidence)) {
 			if (arguments.confidence != "default") {
-				print.redLine("Invalid minimum confidence level, use: none,low,medium,high");
+				error("Invalid minimum confidence level, use: none,low,medium,high");
 				return;	
 			}
 			
@@ -410,7 +433,7 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 		if (len(arguments.configFile)) {
 			arguments.configFile = fileSystemUtil.resolvePath( arguments.configFile );
 			if (!fileExists(arguments.configFile)) {
-				print.boldRedLine("Sorry: configFile was not found: #arguments.configFile#");
+				error("Sorry: configFile was not found: #arguments.configFile#");
 				return;	
 			} else {
 				config.configFile = arguments.configFile;
@@ -418,14 +441,14 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 		}
 
 		if (!fileExists(arguments.path) && !directoryExists(arguments.path) && !arrayLen(paths)) {
-			print.boldRedLine("Sorry: #arguments.path# is not a file or directory.");
+			error("Sorry: #arguments.path# is not a file or directory.");
 			return;
 		}
 
 		fileInfo = getFileInfo(arguments.path);
 		
 		if (!fileInfo.canRead) {
-			print.boldRedLine("Sorry: No read permission for source path");
+			error("Sorry: No read permission for source path");
 			return;
 		}
 
@@ -534,6 +557,15 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 			}
 		}
 
+		if (arguments.json) {
+			print.line(serializeJSON(local.results));
+			if (arrayLen(local.results.results) > 0 ) {
+				if (arguments.failOnIssues) {
+					setExitCode( 1 );	
+				}
+			}
+			return;
+		}
 
 		if (arrayLen(local.results.results) == 0 && arrayLen(local.results.warnings) == 0)   {
 			print.line().boldGreenLine("0 Issues Found");

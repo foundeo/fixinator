@@ -165,6 +165,9 @@ component {
 					if (local.batch.error.keyExists("detail")) {
 						local.detail = local.batch.error.detail;
 					}
+					if (local.batch.error.keyExists("stacktrace")) {
+						local.detail &= chr(10) & local.batch.error.stacktrace;
+					}
 					throw(message=local.batch.error.message, type="FixinatorClient", detail=local.detail);	
 				}
 				
@@ -604,7 +607,7 @@ component {
 			}
 
 			for (local.ignore in ignoredPaths) {
-				if (find(local.ignore, local.p) != 0) {
+				if (findNoCase(normalizeSlashes(local.ignore), normalizeSlashes(local.p)) != 0) {
 					local.skip = true;
 					continue;
 				}
@@ -771,8 +774,20 @@ component {
 	}
 
 	public string function fileSha1(path) {
-		var fIn = createObject("java", "java.io.FileInputStream").init(path);
-		return createObject("java", "org.apache.commons.codec.digest.DigestUtils").sha1Hex(fIn);
+		var digest = createObject("java", "java.security.MessageDigest").getInstance("SHA-1");
+		var fIn = createObject("java", "java.io.FileInputStream").init(arguments.path);
+		try {
+			var buffer = createObject("java", "java.nio.ByteBuffer").allocate(8192).array();
+			var bytesRead = fIn.read(buffer);
+			while (bytesRead != -1) {
+				digest.update(buffer, 0, bytesRead);
+				bytesRead = fIn.read(buffer);
+			}
+		} finally {
+			fIn.close();
+		}
+		var hex = createObject("java", "java.math.BigInteger").init(1, digest.digest()).toString(16);
+		return right(repeatString("0", 40) & hex, 40);
 	}
 
 	public function debugger(string message) {

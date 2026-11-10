@@ -1,6 +1,6 @@
 <cfcomponent>
 	
-	<cfif server.keyExists("lucee") AND NOT getTagList().cf.keyExists( 'document' )>
+	<cfif server.keyExists("lucee") AND getFunctionList().keyExists("getTagList") AND NOT getTagList().cf.keyExists( 'document' )>
 		<cfset variables.hasCFDocument = false>
 	<cfelse>
 		<cfset variables.hasCFDocument = true>
@@ -144,12 +144,12 @@
 					}
 					th { text-align: left; }
 					h2 { font-size: 13pt; }
-					h3 { font-size: 12pt; font-family: monospace; font-weight:bold;}
+					h3 { font-size: 12pt; font-family: monospace; font-weight:bold; margin-top:20px;}
 					.type-key {
 						border-bottom: 1px solid black;
 					}
 					.issue-message, .issue-description { 
-						color:#aaa;
+						color:#3f3f3f;
 						margin-left: 15px;
 					}
 					.issue-description {
@@ -160,13 +160,16 @@
 						border-left: 1px solid black;
 						padding: 10px;
 						overflow-y: scroll;
+						white-space: pre-wrap;
+    					word-wrap: break-word;
 					}
 					.issue-badges {
 						margin-left: 15px;
 						margin-bottom: 10px;
 					}
 					.issue {
-						padding-left: 5px;
+						padding: 10px 5px;
+						border-top: 3px solid #d1d1d1;
 					}
 					h5 {
 						margin-left: 15px;
@@ -174,11 +177,11 @@
 					ol { margin-left: 20px; }
 					ol li { font-size: smaller; }
 					.text-center { text-align: center; }
-					.badge { min-width: 40px; padding: 4px; border-radius: 3px; }
-					.ind-1 { background-color:#444; color:white; }
-					.ind-1 { background-color:purple; color:white; }
-					.ind-2 { background-color:orange; color:white; }
-					.ind-3 { background-color:red; color:white; }
+					.badge { min-width: 40px; padding: 4px; border-radius: 3px; border: 1px solid black; }
+					.ind-1 { border-color:#444; color:#444; }
+					.ind-1 { border-color:purple; color:purple; }
+					.ind-2 { border-color:orange; color:orange; }
+					.ind-3 { border-color:red; color:red; }
 					.type-count { border: 1px solid gray; border-radius: 3px; color:gray; text-align:center; padding: 1px; }
 					.issue-types { width: 100%; }
 					.issue-types a { color: black; text-decoration:none; }
@@ -360,6 +363,14 @@
 									<th align="right">Scan Path:</th>
 									<td>
 										<small>#encodeForHTML(data.fixinatorArguments.path)#</small>
+									</td>
+								</tr>
+							</cfif>
+							<cfif data.keyExists("files") AND isArray(data.files)>
+								<tr>
+									<th align="right">Files Scanned:</th>
+									<td>
+										<small>#encodeForHTML(arrayLen(data.files))#</small>
 									</td>
 								</tr>
 							</cfif>

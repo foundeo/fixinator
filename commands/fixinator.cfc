@@ -60,7 +60,7 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 	* @ignoreExtensions.hint A list of extensions to exclude
 	* @gitLastCommit.hint Scan only files changed in the last git commit
 	* @gitChanged.hint Scan only files changed since the last commit in the working copy
-	* @engines.hint A list of engines your code runs on, eg: lucee@5,adobe@2023 default any
+	* @engines.hint A list of engines your code runs on, or against which you want to run on, eg: lucee@7,adobe@2025 default any
 	* @includeScanners.hint A comma separated list of scanner ids to scan, all others ignored
 	* @configFile.hint A path to a .fixinator.json file to use
 	* @goals.hint A list of goals for scanning [compatibility,security], default: security
@@ -525,6 +525,9 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 				if (structKeyExists(err, "detail")) {
 					print.whiteLine(err.detail);	
 				}
+				if (structKeyExists(err, "stacktrace") && arguments.debug) {
+					print.whiteLine(err.stacktrace);
+				}
 				error("Fixinator Exiting Due to Error");
 				return;
 			} else {
@@ -589,8 +592,6 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 			}
 		} else {
 			print.boldRedLine("FINDINGS: " & arrayLen(local.results.results));
-
-			
 
 			local.resultsByType = {};
 			for (local.i in local.results.results) {
@@ -694,7 +695,11 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 							for (local.fix in local.i.fixes) {
 								local.fixIndex++;
 								local.fixOptions = listAppend(local.fixOptions, local.fixIndex);
-								print.greyLine("        "&local.fixIndex&") "&local.fix.title & ": " & trim(local.fix.fixCode) );
+								local.fixSuffix = "";
+								if (len(trim(local.fix.fixCode))) {
+									local.fixSuffix = ": " & trim(local.fix.fixCode);
+								}
+								print.greyLine("        "&local.fixIndex&") "&local.fix.title & local.fixSuffix );
 								if ( findNoCase('cfsqltype="cf_sql_varchar"', local.fix.fixCode) ) {
 									local.queryparamFix = local.fixIndex;
 								}
@@ -825,6 +830,32 @@ component extends="commandbox.system.BaseCommand" excludeFromHelp=false {
 			print.boldGreenLine("    box install fixinator");
 		}
 
+		if (arguments.verbose && local.results.keyExists("files") && isArray(local.results.files)) {
+			print.line();
+			
+			
+			if (arrayLen(local.results.files) > 1) {
+				local.filesWithIssues = [];
+				for (local.i in local.results.results) {
+					if (local.i.keyExists("path") && !arrayFindNoCase(local.filesWithIssues, local.i.path)) {
+						arrayAppend(local.filesWithIssues, local.i.path);
+					}
+				}
+				if (arrayLen(local.results.results) == 1) {
+					print.line("1 result across #arrayLen(local.filesWithIssues)# of #arrayLen(local.results.files)# files scanned.");	
+				} else {
+					print.line("#arrayLen(local.results.results)# results across #arrayLen(local.filesWithIssues)# of #arrayLen(local.results.files)# files scanned.");
+				}
+			} else {
+				if (arrayLen(local.results.results) == 1) {
+					print.line("1 result across 1 file scanned.");
+				} else {
+					print.line("#arrayLen(local.results.results)# results across 1 file scanned.");
+				}
+				
+			}
+			
+		}
 
 		if (arrayLen(local.results.results) > 0 ) {
 			if (arguments.failOnIssues) {

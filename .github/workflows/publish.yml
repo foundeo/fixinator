@@ -26,7 +26,7 @@ jobs:
           
           echo $VERSION
           
-          box bump version=$VERSION
+          box bump version=$VERSION tagVersion=false
           
           cat box.json
           
